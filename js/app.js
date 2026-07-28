@@ -281,10 +281,14 @@ const Rentiwa = {
         this.showToast(`Welcome, ${userObj.name}!`, 'success');
         return userObj;
       }
+      return null;
     } catch (err) {
+      if (err && (err.code === 'auth/cancelled-popup-request' || err.code === 'auth/popup-closed-by-user')) {
+        return null;
+      }
       console.error("Google sign in error:", err);
       this.showToast("Google sign in failed. Please try again.", "error");
-      throw err;
+      return null;
     }
   },
 
