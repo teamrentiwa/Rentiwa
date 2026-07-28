@@ -79,27 +79,28 @@
   <script type="module" src="/js/app.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const user = Rentiwa.getUser();
-      if (!user) {
-        Rentiwa.loginAsDefaultUser();
+      let activeUser = Rentiwa.getUser();
+      if (!activeUser) {
+        activeUser = Rentiwa.defaultUser;
       }
 
-      const activeUser = Rentiwa.getUser() || Rentiwa.defaultUser;
       document.getElementById('profile-name').innerText = activeUser.name;
       document.getElementById('profile-email').innerText = activeUser.email;
-      document.getElementById('profile-img').src = activeUser.avatar;
+      document.getElementById('profile-img').src = activeUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80';
 
       if (activeUser.plan === 'premium') {
         document.getElementById('profile-plan-badge').innerText = '⭐ Premium Plan';
         document.getElementById('profile-plan-badge').className = 'badge badge-amber';
         document.getElementById('profile-listings-usage').innerText = 'Unlimited';
       } else {
-        const count = activeUser.listingsCount || 2;
+        const count = activeUser.listingsCount || 0;
         document.getElementById('profile-listings-usage').innerText = `${count}/5 used`;
       }
 
       renderMyListings(activeUser.name);
       renderMyFavorites();
+      window.renderMyListings = renderMyListings;
+      window.renderMyFavorites = renderMyFavorites;
     });
 
     function switchProfileTab(tabName, btnEl) {
@@ -112,7 +113,16 @@
 
     function renderMyListings(userName) {
       const grid = document.getElementById('my-listings-grid');
-      const products = Rentiwa.getProducts().filter(p => p.ownerName === userName || p.id.startsWith('p_'));
+      if (!grid) return;
+      const user = Rentiwa.getUser();
+      const allProducts = Rentiwa.getProducts();
+      const products = allProducts.filter(p => {
+        if (!user) return p.ownerName === userName;
+        return (p.ownerUid && p.ownerUid === user.uid) ||
+               (p.ownerEmail && p.ownerEmail === user.email) ||
+               (p.ownerName && p.ownerName === user.name) ||
+               p.ownerName === userName;
+      });
 
       if (products.length === 0) {
         grid.innerHTML = `<p style="grid-column:1/-1; color:var(--text-muted); text-align:center; padding:30px 0;">You haven't listed any products yet. Click + Add New Listing!</p>`;

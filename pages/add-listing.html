@@ -326,11 +326,17 @@
       `).join('');
     }
 
-    function handleFormSubmit(e) {
+    async function handleFormSubmit(e) {
       e.preventDefault();
 
       if (!Rentiwa.checkCanListProduct()) {
         return;
+      }
+
+      const submitBtn = document.querySelector('#add-listing-form button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<span>Uploading & Saving to Firestore...</span>`;
       }
 
       const user = Rentiwa.getUser() || Rentiwa.defaultUser;
@@ -362,12 +368,21 @@
         rentalTerms: document.getElementById('product-terms').value || 'Aadhaar ID copy required at pick up.'
       };
 
-      const newProd = Rentiwa.saveProduct(productData);
-      Rentiwa.showToast('🎉 Product listed successfully!', 'success');
+      try {
+        const newProd = await Rentiwa.saveProduct(productData);
+        Rentiwa.showToast('🎉 Product listed in Firestore successfully!', 'success');
 
-      setTimeout(() => {
-        window.location.href = `/pages/listing.html?id=${newProd.id}`;
-      }, 800);
+        setTimeout(() => {
+          window.location.href = `/pages/listing.html?id=${newProd.id}`;
+        }, 800);
+      } catch (err) {
+        console.error(err);
+        Rentiwa.showToast('Error saving listing to Firestore. Saved locally instead.', 'info');
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = `<span>Post Listing</span>`;
+        }
+      }
     }
   </script>
 </body>

@@ -4,6 +4,8 @@
  * Phase 1 MVP - Narela (Delhi) Initial Launch
  */
 
+import { auth, signInWithGoogle as fbSignInWithGoogle, logoutGoogle as fbLogoutGoogle, onAuthChange, fetchListingsFromFirestore, saveListingToFirestore, deleteListingFromFirestore, uploadListingImage } from '/src/firebase.ts';
+
 // Global State Manager
 const Rentiwa = {
   // Key constants
@@ -69,8 +71,59 @@ const Rentiwa = {
   // Initialize App
   init() {
     this.ensureSeedData();
+    this.setupAuthListener();
     this.renderHeaderAndFooter();
     this.bindGlobalEvents();
+    this.syncListingsFromFirestore();
+  },
+
+  async syncListingsFromFirestore() {
+    try {
+      const firestoreListings = await fetchListingsFromFirestore();
+      if (firestoreListings && Array.isArray(firestoreListings)) {
+        localStorage.setItem(this.STORAGE_PRODUCTS_KEY, JSON.stringify(firestoreListings));
+        if (typeof window.filterHomeProducts === 'function') window.filterHomeProducts();
+        if (typeof window.applyFilters === 'function') window.applyFilters();
+        if (typeof window.loadListingDetail === 'function') window.loadListingDetail();
+        if (typeof window.renderMyListings === 'function') {
+          const user = this.getUser();
+          window.renderMyListings(user ? user.name : '');
+        }
+      }
+    } catch (err) {
+      console.warn("Firestore sync error:", err);
+    }
+    return this.getProducts();
+  },
+
+  setupAuthListener() {
+    onAuthChange((fbUser) => {
+      if (fbUser) {
+        const existing = this.getUser();
+        const updatedUser = {
+          uid: fbUser.uid,
+          name: fbUser.displayName || (existing ? existing.name : 'Rentiwa User'),
+          email: fbUser.email || (existing ? existing.email : ''),
+          phone: fbUser.phoneNumber || (existing ? existing.phone : '+91 98765 00112'),
+          city: (existing && existing.city) ? existing.city : 'Narela, Delhi',
+          area: (existing && existing.area) ? existing.area : 'Narela Sector A6',
+          plan: (existing && existing.plan) ? existing.plan : 'free',
+          listingsCount: (existing && typeof existing.listingsCount === 'number') ? existing.listingsCount : 0,
+          avatar: fbUser.photoURL || (existing ? existing.avatar : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80')
+        };
+        localStorage.setItem(this.STORAGE_USER_KEY, JSON.stringify(updatedUser));
+      } else {
+        const existing = this.getUser();
+        if (existing && existing.uid) {
+          localStorage.removeItem(this.STORAGE_USER_KEY);
+        }
+      }
+      this.updateUserNavUI();
+      if (typeof window.renderMyListings === 'function') {
+        const u = this.getUser();
+        window.renderMyListings(u ? u.name : '');
+      }
+    });
   },
 
   ensureSeedData() {
@@ -102,27 +155,84 @@ const Rentiwa = {
     return products.find(p => p.id === id) || products[0];
   },
 
-  saveProduct(productData) {
-    const products = this.getProducts();
+  async saveProduct(productData) {
+    const user = this.getUser();
+
+    // Upload image files or data URLs to Firebase Storage
+    let uploadedUrls = [];
+    if (productData.images && productData.images.length > 0) {
+      for (const imgItem of productData.images) {
+        if (imgItem instanceof File) {
+          const url = await uploadListingImage(imgItem);
+          uploadedUrls.push(url);
+        } else if (typeof imgItem === 'string' && imgItem.startsWith('data:image/')) {
+          try {
+            const res = await fetch(imgItem);
+            const blob = await res.blob();
+            const file = new File([blob], `photo_${Date.now()}.jpg`, { type: blob.type || 'image/jpeg' });
+            const url = await uploadListingImage(file);
+            uploadedUrls.push(url);
+          } catch (e) {
+            uploadedUrls.push(imgItem);
+          }
+        } else {
+          uploadedUrls.push(imgItem);
+        }
+      }
+    }
+
+    if (uploadedUrls.length === 0) {
+      uploadedUrls = ['https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80'];
+    }
+
     const newProduct = {
-      id: 'p_' + Date.now(),
+      title: productData.title || 'Untitled Item',
+      category: productData.category || 'Tools',
+      availability: productData.availability || 'Available',
+      pricingType: productData.pricingType || 'both',
+      priceHour: Number(productData.priceHour) || 0,
+      priceDay: Number(productData.priceDay) || 0,
+      description: productData.description || '',
+      images: uploadedUrls,
+      city: productData.city || 'Delhi',
+      area: productData.area || 'Narela',
+      location: productData.location || `${productData.area || 'Narela'}, Delhi`,
+      ownerUid: user ? (user.uid || '') : '',
+      ownerEmail: user ? (user.email || '') : '',
+      ownerName: user ? user.name : (productData.ownerName || 'Rentiwa User'),
+      ownerAvatar: user ? user.avatar : (productData.ownerAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'),
+      ownerPhone: productData.ownerPhone || (user ? user.phone : '+91 98765 00112'),
+      ownerWhatsapp: productData.ownerWhatsapp || (user ? user.phone : '+91 98765 00112'),
+      rentalTerms: productData.rentalTerms || 'Aadhaar ID copy required at pick up.',
       rating: 5.0,
       reviewCount: 1,
-      city: 'Delhi',
-      ownerJoined: 'Just Now',
-      ownerRating: 5.0,
-      ...productData
+      createdAt: Date.now()
     };
-    products.unshift(newProduct);
-    localStorage.setItem(this.STORAGE_PRODUCTS_KEY, JSON.stringify(products));
 
-    // Update user listings count
-    const user = this.getUser();
-    if (user) {
-      user.listingsCount = (user.listingsCount || 0) + 1;
-      this.setUser(user);
+    try {
+      const created = await saveListingToFirestore(newProduct);
+      const products = this.getProducts();
+      products.unshift(created);
+      localStorage.setItem(this.STORAGE_PRODUCTS_KEY, JSON.stringify(products));
+
+      if (user) {
+        user.listingsCount = (user.listingsCount || 0) + 1;
+        this.setUser(user);
+      }
+      return created;
+    } catch (err) {
+      console.error("Firestore save failed, falling back to local storage:", err);
+      const fallbackProduct = { id: 'p_' + Date.now(), ...newProduct };
+      const products = this.getProducts();
+      products.unshift(fallbackProduct);
+      localStorage.setItem(this.STORAGE_PRODUCTS_KEY, JSON.stringify(products));
+
+      if (user) {
+        user.listingsCount = (user.listingsCount || 0) + 1;
+        this.setUser(user);
+      }
+      return fallbackProduct;
     }
-    return newProduct;
   },
 
   getRequests() {
@@ -152,13 +262,44 @@ const Rentiwa = {
     this.updateUserNavUI();
   },
 
-  logout() {
+  async loginWithGoogle() {
+    try {
+      const fbUser = await fbSignInWithGoogle();
+      if (fbUser) {
+        const userObj = {
+          uid: fbUser.uid,
+          name: fbUser.displayName || 'Rentiwa User',
+          email: fbUser.email || '',
+          phone: fbUser.phoneNumber || '+91 98765 00112',
+          city: 'Narela, Delhi',
+          area: 'Narela Sector A6',
+          plan: 'free',
+          listingsCount: 0,
+          avatar: fbUser.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
+        };
+        this.setUser(userObj);
+        this.showToast(`Welcome, ${userObj.name}!`, 'success');
+        return userObj;
+      }
+    } catch (err) {
+      console.error("Google sign in error:", err);
+      this.showToast("Google sign in failed. Please try again.", "error");
+      throw err;
+    }
+  },
+
+  async logout() {
+    try {
+      await fbLogoutGoogle();
+    } catch (err) {
+      console.error("Firebase logout error:", err);
+    }
     localStorage.removeItem(this.STORAGE_USER_KEY);
     this.showToast('Logged out successfully', 'info');
     this.updateUserNavUI();
     setTimeout(() => {
       window.location.reload();
-    }, 600);
+    }, 400);
   },
 
   loginAsDefaultUser() {
@@ -268,7 +409,12 @@ const Rentiwa = {
     const isFav = favs.includes(p.id) || favs.includes(String(p.id));
     const priceHTML = this.formatProductPrice(p);
     const user = this.getUser();
-    const isMyItem = user && (user.name === p.ownerName || user.email === p.ownerEmail) || String(p.id).startsWith('p_');
+    const isMyItem = user && (
+      (p.ownerUid && user.uid === p.ownerUid) ||
+      (p.ownerEmail && user.email === p.ownerEmail) ||
+      (p.ownerName && user.name === p.ownerName) ||
+      String(p.id).startsWith('p_')
+    );
     const onDeleteCallbackName = options.onDeleteCallback || '';
     const onFavToggle = options.onFavToggle || '';
 
@@ -412,7 +558,23 @@ const Rentiwa = {
       return false;
     }
 
+    const user = this.getUser();
     let products = this.getProducts();
+    const product = products.find(p => p.id === id || String(p.id) === String(id));
+
+    if (product && user) {
+      const isOwner = (product.ownerUid && product.ownerUid === user.uid) ||
+                      (product.ownerEmail && product.ownerEmail === user.email) ||
+                      (product.ownerName && product.ownerName === user.name) ||
+                      String(product.id).startsWith('p_');
+      if (!isOwner) {
+        this.showToast('Permission denied: You can only delete your own listings.', 'error');
+        return false;
+      }
+    }
+
+    deleteListingFromFirestore(id).catch(err => console.warn('Firestore delete note:', err));
+
     const initialCount = products.length;
     products = products.filter(p => p.id !== id && String(p.id) !== String(id));
 
@@ -427,7 +589,6 @@ const Rentiwa = {
       }
 
       // Update user listingsCount
-      const user = this.getUser();
       if (user && user.listingsCount > 0) {
         user.listingsCount = user.listingsCount - 1;
         this.setUser(user);
@@ -500,7 +661,10 @@ const Rentiwa = {
                     </div>
                   </div>
                 ` : `
-                  <a href="/pages/login.html" class="btn btn-primary btn-sm">Login / Signup</a>
+                  <button onclick="Rentiwa.loginWithGoogle().then(() => { if (window.location.pathname.includes('login') || window.location.pathname.includes('signup')) window.location.href='/pages/profile.html'; })" class="btn btn-secondary btn-sm" style="display:inline-flex; align-items:center; gap:6px; font-weight:600;">
+                    <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+                    <span>Continue with Google</span>
+                  </button>
                 `}
               </div>
 
@@ -701,11 +865,14 @@ const Rentiwa = {
   },
 
   quickGoogleLogin() {
-    this.loginAsDefaultUser();
-    this.closeModal('login-modal-overlay');
-    setTimeout(() => {
-      window.location.reload();
-    }, 600);
+    this.loginWithGoogle().then(() => {
+      this.closeModal('login-modal-overlay');
+      setTimeout(() => {
+        window.location.reload();
+      }, 400);
+    }).catch(err => {
+      console.error(err);
+    });
   },
 
   closeModal(modalId) {

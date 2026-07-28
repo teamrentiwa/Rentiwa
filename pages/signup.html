@@ -71,10 +71,15 @@
   <script type="module" src="/js/app.js"></script>
   <script>
     function handleGoogleSignup() {
-      Rentiwa.loginAsDefaultUser();
-      setTimeout(() => {
-        window.location.href = '/pages/profile.html';
-      }, 500);
+      Rentiwa.loginWithGoogle().then((user) => {
+        if (user) {
+          setTimeout(() => {
+            window.location.href = '/pages/profile.html';
+          }, 400);
+        }
+      }).catch(err => {
+        console.error(err);
+      });
     }
 
     function handleSignupSubmit(e) {
