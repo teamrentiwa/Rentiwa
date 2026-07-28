@@ -1,0 +1,6 @@
+{
+  "name": "Rentiwa",
+  "description": "Peer-to-peer item rental marketplace connecting item owners and local renters starting in Narela, Delhi.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

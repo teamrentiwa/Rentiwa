@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 80" width="320" height="80">
+  <g transform="translate(10, 5) scale(0.7)">
+    <g fill="#FF5500">
+      <path d="M 50 10 C 72 10 88 26 88 48 C 66 48 50 32 50 10 Z" />
+      <path d="M 90 50 C 90 72 74 88 52 88 C 52 66 68 50 90 50 Z" />
+      <path d="M 50 90 C 28 90 12 74 12 52 C 34 52 50 68 50 90 Z" />
+      <path d="M 10 50 C 10 28 26 12 48 12 C 48 34 32 50 10 50 Z" />
+    </g>
+  </g>
+  <text x="95" y="52" font-family="'Outfit', 'Plus Jakarta Sans', sans-serif" font-weight="800" font-size="42" fill="#0B132B" letter-spacing="-1">Rentiwa</text>
+</svg>

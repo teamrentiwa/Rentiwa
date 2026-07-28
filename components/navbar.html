@@ -1,0 +1,38 @@
+<!-- RENTIWA Navbar Component -->
+<nav class="navbar">
+  <div class="container nav-container">
+    <a href="/" class="brand-logo">
+      <div class="logo-icon">
+        <img src="/assets/logo.png" onerror="this.onerror=null; this.src='https://i.ibb.co/ZRpnbdjd/Rentiwa-logo.png';" alt="Rentiwa Logo" class="brand-logo-img">
+      </div>
+      <span class="brand-name">Rentiwa</span>
+      <div class="city-pill">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+        </svg>
+        Narela (Delhi)
+      </div>
+    </a>
+
+    <ul class="nav-menu" id="nav-menu-list">
+      <li><a href="/" class="nav-link">Home</a></li>
+      <li><a href="/pages/all-listings.html" class="nav-link">All Listings</a></li>
+      <li><a href="/#browse" class="nav-link">Browse</a></li>
+      <li><a href="/pages/pricing.html" class="nav-link">Pricing</a></li>
+    </ul>
+
+    <div class="nav-actions">
+      <button onclick="Rentiwa.handleListButtonClick()" class="btn btn-primary btn-sm">
+        + List Item
+      </button>
+
+      <div id="auth-nav-box">
+        <a href="/pages/login.html" class="btn btn-primary btn-sm">Login / Signup</a>
+      </div>
+
+      <button class="mobile-toggle" onclick="Rentiwa.toggleMobileNav()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+      </button>
+    </div>
+  </div>
+</nav>

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>All Rental Listings - RENTIWA Narela Marketplace</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .all-listings-header {
+      background: linear-gradient(135deg, rgba(255, 85, 0, 0.08) 0%, rgba(37, 211, 102, 0.05) 100%);
+      padding: 36px 0 28px 0;
+      border-bottom: 1px solid var(--border-light);
+      margin-bottom: 32px;
+    }
+    
+    .filter-panel {
+      background: #ffffff;
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-xl);
+      padding: 24px;
+      margin-bottom: 32px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .filter-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 16px;
+      align-items: end;
+    }
+
+    @media (max-width: 992px) {
+      .filter-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 576px) {
+      .filter-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .results-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Dynamic Navbar Placeholder -->
+  <div id="navbar-container"></div>
+
+  <main>
+    <!-- PAGE HEADER -->
+    <section class="all-listings-header">
+      <div class="container">
+        <div style="display:flex; align-items:center; gap:8px; font-size:0.88rem; color:var(--text-muted); margin-bottom:12px;">
+          <a href="/">Home</a> <span>/</span>
+          <span style="color:var(--dark); font-weight:600;">All Listings</span>
+        </div>
+        <h1 class="heading-xl" style="margin-bottom:8px;">
+          All Rental Listings in <span class="orange-gradient-text">Narela</span>
+        </h1>
+        <p class="subheading" style="margin-bottom:0;">
+          Browse cameras, speakers, tools, gaming consoles, cycles & party gear available directly from owners.
+        </p>
+      </div>
+    </section>
+
+    <!-- MAIN CONTAINER -->
+    <div class="container" style="padding-bottom:60px;">
+      <!-- FILTER & SEARCH PANEL -->
+      <div class="filter-panel">
+        <div class="filter-grid">
+          <!-- Search Input -->
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="all-search-input">Search Items</label>
+            <div style="position:relative;">
+              <input type="text" id="all-search-input" class="form-input" placeholder="e.g. DSLR Camera, Speaker, Drill, PS5" oninput="applyFilters()" style="padding-left:40px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--text-muted);"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            </div>
+          </div>
+
+          <!-- Category Select -->
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="all-category-select">Category</label>
+            <select id="all-category-select" class="form-select" onchange="applyFilters()">
+              <option value="All">All Categories</option>
+              <option value="Photography">📷 Photography</option>
+              <option value="Events">🔊 Events & Speakers</option>
+              <option value="Gaming">🎮 Gaming Consoles</option>
+              <option value="Electronics">💻 Electronics</option>
+              <option value="Tools">🔧 Power Tools</option>
+              <option value="Sports">⛺ Camping & Sports</option>
+              <option value="Vehicles">🚲 Bicycles & Cycles</option>
+              <option value="Music">🎤 Music & Audio</option>
+              <option value="Furniture">🪑 Furniture & Stage</option>
+            </select>
+          </div>
+
+          <!-- Area Select -->
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="all-area-select">Location / Area</label>
+            <select id="all-area-select" class="form-select" onchange="applyFilters()">
+              <option value="all">All Narela Areas</option>
+              <option value="Sector A6">Sector A6</option>
+              <option value="Safiabad Road">Safiabad Road</option>
+              <option value="Lampur Road">Lampur Road</option>
+              <option value="DSIIDC">DSIIDC Area</option>
+              <option value="Narela Mandi">Narela Mandi</option>
+              <option value="Swatantra Nagar">Swatantra Nagar</option>
+            </select>
+          </div>
+
+          <!-- Sort Select -->
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="all-sort-select">Sort By Price</label>
+            <select id="all-sort-select" class="form-select" onchange="applyFilters()">
+              <option value="newest">Newest First</option>
+              <option value="low-to-high">Price: Low to High</option>
+              <option value="high-to-low">Price: High to Low</option>
+              <option value="rating">Top Rated Owners</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- RESULTS HEADER -->
+      <div class="results-bar">
+        <div style="font-size:1rem; font-weight:700; color:var(--dark);">
+          Showing <span id="results-count" class="orange-text">0</span> rental items
+        </div>
+        <button onclick="resetFilters()" class="btn btn-outline btn-sm" style="font-size:0.82rem;">
+          🔄 Reset Filters
+        </button>
+      </div>
+
+      <!-- PRODUCT GRID -->
+      <div class="products-grid" id="all-products-grid">
+        <!-- Products populated via JS -->
+      </div>
+    </div>
+  </main>
+
+  <!-- Dynamic Footer Placeholder -->
+  <div id="footer-container"></div>
+
+  <!-- Scripts -->
+  <script type="module" src="/js/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Check for URL query category
+      const urlParams = new URLSearchParams(window.location.search);
+      const catParam = urlParams.get('category');
+      if (catParam) {
+        const catSelect = document.getElementById('all-category-select');
+        if (catSelect) catSelect.value = catParam;
+      }
+      applyFilters();
+    });
+
+    function applyFilters() {
+      const searchVal = document.getElementById('all-search-input').value.toLowerCase().trim();
+      const catVal = document.getElementById('all-category-select').value;
+      const areaVal = document.getElementById('all-area-select').value;
+      const sortVal = document.getElementById('all-sort-select').value;
+
+      const grid = document.getElementById('all-products-grid');
+      const countEl = document.getElementById('results-count');
+
+      let allProducts = Rentiwa.getProducts();
+      const favs = Rentiwa.getFavorites();
+
+      // Filter logic
+      let filtered = allProducts.filter(p => {
+        const matchesCat = (catVal === 'All' || p.category === catVal);
+        const matchesSearch = (!searchVal || p.title.toLowerCase().includes(searchVal) || p.description.toLowerCase().includes(searchVal));
+        const matchesArea = (areaVal === 'all' || (p.area && p.area.includes(areaVal)) || (p.location && p.location.includes(areaVal)));
+        return matchesCat && matchesSearch && matchesArea;
+      });
+
+      // Sort logic
+      if (sortVal === 'low-to-high') {
+        filtered.sort((a, b) => {
+          const priceA = a.priceDay || a.priceHour || 0;
+          const priceB = b.priceDay || b.priceHour || 0;
+          return priceA - priceB;
+        });
+      } else if (sortVal === 'high-to-low') {
+        filtered.sort((a, b) => {
+          const priceA = a.priceDay || a.priceHour || 0;
+          const priceB = b.priceDay || b.priceHour || 0;
+          return priceB - priceA;
+        });
+      } else if (sortVal === 'rating') {
+        filtered.sort((a, b) => (b.rating || 5) - (a.rating || 5));
+      }
+
+      if (countEl) countEl.innerText = filtered.length;
+
+      if (filtered.length === 0) {
+        grid.innerHTML = `
+          <div style="grid-column: 1/-1; text-align:center; padding:60px 20px; background:var(--bg-secondary); border-radius:var(--radius-lg);">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--text-light); margin-bottom:12px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <h3 class="heading-sm" style="margin-bottom:6px;">No products match your search</h3>
+            <p style="font-size:0.95rem; color:var(--text-muted); margin-bottom:16px;">
+              Try adjusting your search criteria or explore other categories.
+            </p>
+            <button onclick="resetFilters()" class="btn btn-primary btn-sm">
+              Clear Filters
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = filtered.map(p => {
+        return Rentiwa.renderProductCardHTML(p, {
+          onFavToggle: 'applyFilters()',
+          onDeleteCallback: 'applyFilters'
+        });
+      }).join('');
+    }
+
+    function resetFilters() {
+      document.getElementById('all-search-input').value = '';
+      document.getElementById('all-category-select').value = 'All';
+      document.getElementById('all-area-select').value = 'all';
+      document.getElementById('all-sort-select').value = 'newest';
+      applyFilters();
+    }
+  </script>
+</body>
+</html>

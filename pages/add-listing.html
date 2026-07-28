@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>List Your Item for Rent - RENTIWA Narela</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <div id="navbar-container"></div>
+
+  <main class="container-narrow" style="padding-top:40px;">
+    <div style="text-align:center; margin-bottom:32px;">
+      <div class="badge badge-green" style="margin-bottom:8px;">FREE UP TO 5 LISTINGS</div>
+      <h1 class="heading-lg">List Your Product for Rent</h1>
+      <p class="subheading">Convert your unused DSLR camera, speaker, drill, or cycle into cash in Narela</p>
+    </div>
+
+    <!-- FORM CARD -->
+    <div class="form-card">
+      <form id="add-listing-form" onsubmit="handleFormSubmit(event)">
+        <div class="form-grid">
+          <!-- Title -->
+          <div class="form-group form-grid-full">
+            <label class="form-label" for="product-title">Product Name *</label>
+            <input type="text" id="product-title" class="form-input" placeholder="e.g. Canon DSLR EOS 1500D with 18-55mm Lens" required>
+          </div>
+
+          <!-- Category -->
+          <div class="form-group">
+            <label class="form-label" for="product-category">Category *</label>
+            <select id="product-category" class="form-select" required>
+              <option value="">Select Category</option>
+              <option value="Photography">Photography & Cameras</option>
+              <option value="Events">Events & Speakers</option>
+              <option value="Gaming">Gaming Consoles</option>
+              <option value="Electronics">Electronics & Laptops</option>
+              <option value="Tools">Power Tools & Drills</option>
+              <option value="Sports">Camping & Sports</option>
+              <option value="Vehicles">Bicycles & Cycles</option>
+              <option value="Music">Music & Microphones</option>
+              <option value="Furniture">Furniture & Tables</option>
+            </select>
+          </div>
+
+          <!-- Availability -->
+          <div class="form-group">
+            <label class="form-label" for="product-availability">Availability *</label>
+            <select id="product-availability" class="form-select" required>
+              <option value="Available Now">Available Now</option>
+              <option value="Available Today">Available Today</option>
+              <option value="Available Weekend">Available Weekend</option>
+            </select>
+          </div>
+
+          <!-- Pricing Mode Selector -->
+          <div class="form-group form-grid-full">
+            <label class="form-label">Rental Pricing Option *</label>
+            <div class="pricing-mode-selector">
+              <label class="pricing-mode-option active" id="mode-opt-day" onclick="selectPricingMode('day')">
+                <input type="radio" name="pricing-mode" value="day" checked style="display:none;">
+                <div style="font-weight:700; font-size:0.95rem;">📅 Pay Per Day</div>
+                <div style="font-size:0.78rem; color:var(--text-muted);">e.g. ₹700 / Day</div>
+              </label>
+
+              <label class="pricing-mode-option" id="mode-opt-hour" onclick="selectPricingMode('hour')">
+                <input type="radio" name="pricing-mode" value="hour" style="display:none;">
+                <div style="font-weight:700; font-size:0.95rem;">⏱️ Pay Per Hour</div>
+                <div style="font-size:0.78rem; color:var(--text-muted);">e.g. ₹150 / Hour</div>
+              </label>
+
+              <label class="pricing-mode-option" id="mode-opt-both" onclick="selectPricingMode('both')">
+                <input type="radio" name="pricing-mode" value="both" style="display:none;">
+                <div style="font-weight:700; font-size:0.95rem;">⚡ Both (Hour & Day)</div>
+                <div style="font-size:0.78rem; color:var(--text-muted);">Offer both options</div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Price Per Day Input -->
+          <div class="form-group" id="group-price-day">
+            <label class="form-label" for="product-price-day">Price Per Day (₹) *</label>
+            <input type="number" id="product-price-day" class="form-input" placeholder="e.g. 700" min="10" required>
+          </div>
+
+          <!-- Price Per Hour Input -->
+          <div class="form-group" id="group-price-hour" style="display:none;">
+            <label class="form-label" for="product-price-hour">Price Per Hour (₹)</label>
+            <input type="number" id="product-price-hour" class="form-input" placeholder="e.g. 150" min="5">
+          </div>
+
+          <!-- Description -->
+          <div class="form-group form-grid-full">
+            <label class="form-label" for="product-desc">Product Description & Included Accessories *</label>
+            <textarea id="product-desc" class="form-textarea" placeholder="Describe condition, accessories included (bag, charger, cable), and ideal use cases..." required></textarea>
+          </div>
+
+          <!-- Image Upload / Sample Image Selector -->
+          <div class="form-group form-grid-full">
+            <label class="form-label">Product Photos (Upload or Choose Presets) *</label>
+
+            <!-- Hidden File Input -->
+            <input type="file" id="product-file-input" accept="image/*" multiple style="display:none;" onchange="handleFileSelect(event)">
+
+            <!-- Dropzone -->
+            <div class="image-upload-dropzone" id="upload-dropzone" onclick="triggerFileInput()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleFileDrop(event)">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--primary);"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+              <div>
+                <div style="font-weight:700; font-size:1rem; color:var(--dark);">Click to Select Photos or Drag & Drop Here</div>
+                <div style="font-size:0.82rem; color:var(--text-muted); margin-top:2px;">
+                  Upload multiple photos from your device (JPEG, PNG, WebP)
+                </div>
+              </div>
+              <button type="button" class="btn btn-outline btn-sm" onclick="event.stopPropagation(); triggerFileInput();" style="margin-top:2px;">
+                📷 Choose Photos from Device
+              </button>
+            </div>
+
+            <!-- Quick Presets & URL Fallback -->
+            <div style="margin-top:16px; border-top:1px solid var(--border-subtle); padding-top:14px;">
+              <div style="font-size:0.85rem; font-weight:600; color:var(--dark-muted); margin-bottom:8px;">Or add via preset photo / image URL:</div>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <select id="sample-img-select" class="form-select" onchange="addPresetImage(this.value)">
+                  <option value="">-- Add Preset Sample Photo --</option>
+                  <option value="https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80">Preset: Canon DSLR Camera</option>
+                  <option value="https://images.unsplash.com/photo-1545454675-3531b543be5d?auto=format&fit=crop&w=800&q=80">Preset: JBL Party Speaker</option>
+                  <option value="https://images.unsplash.com/photo-1606813907291-d86efa9b94db?auto=format&fit=crop&w=800&q=80">Preset: Sony PlayStation 5</option>
+                  <option value="https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80">Preset: Bosch Drill Machine</option>
+                  <option value="https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=800&q=80">Preset: Bicycle</option>
+                  <option value="https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=800&q=80">Preset: Camping Tent</option>
+                </select>
+
+                <div style="display:flex; gap:6px;">
+                  <input type="url" id="custom-img-url" class="form-input" placeholder="Paste image URL (https://...)">
+                  <button type="button" onclick="addCustomUrlImage()" class="btn btn-secondary btn-sm" style="white-space:nowrap;">+ Add</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Preview Thumbnails -->
+            <div class="image-preview-grid" id="preview-grid-container">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Location (Area) -->
+          <div class="form-group">
+            <label class="form-label" for="product-city">City *</label>
+            <input type="text" id="product-city" class="form-input" value="Narela, Delhi" readonly style="background:var(--bg-secondary);">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="product-area">Area in Narela *</label>
+            <select id="product-area" class="form-select" required>
+              <option value="Narela Sector A6, Delhi">Narela Sector A6</option>
+              <option value="Safiabad Road, Narela">Safiabad Road</option>
+              <option value="Lampur Road, Narela">Lampur Road</option>
+              <option value="DSIIDC Industrial Area, Narela">DSIIDC Industrial Area</option>
+              <option value="Narela Mandi, Delhi">Narela Mandi</option>
+              <option value="Swatantra Nagar, Narela">Swatantra Nagar</option>
+            </select>
+          </div>
+
+          <!-- Owner Phone & WhatsApp -->
+          <div class="form-group">
+            <label class="form-label" for="owner-phone">Phone Number *</label>
+            <input type="tel" id="owner-phone" class="form-input" placeholder="+91 98765 43210" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="owner-whatsapp">WhatsApp Number *</label>
+            <input type="tel" id="owner-whatsapp" class="form-input" placeholder="919876543210" required>
+          </div>
+
+          <!-- Rental Terms -->
+          <div class="form-group form-grid-full">
+            <label class="form-label" for="product-terms">Rental Terms & Security Requirements</label>
+            <textarea id="product-terms" class="form-textarea" placeholder="e.g. Original Aadhaar Card copy + ₹1,000 security deposit required at pickup."></textarea>
+          </div>
+        </div>
+
+        <div style="margin-top:28px;">
+          <button type="submit" class="btn btn-primary btn-full btn-lg">
+            Submit Product Listing
+          </button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <div id="footer-container"></div>
+
+  <script type="module" src="/js/app.js"></script>
+  <script>
+    let activePricingMode = 'day';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const user = Rentiwa.getUser() || Rentiwa.defaultUser;
+      if (user) {
+        document.getElementById('owner-phone').value = user.phone || '+91 98765 43210';
+        document.getElementById('owner-whatsapp').value = '919876543210';
+      }
+    });
+
+    function selectPricingMode(mode) {
+      activePricingMode = mode;
+      document.querySelectorAll('.pricing-mode-option').forEach(el => el.classList.remove('active'));
+      const activeEl = document.getElementById(`mode-opt-${mode}`);
+      if (activeEl) activeEl.classList.add('active');
+
+      const hourGroup = document.getElementById('group-price-hour');
+      const dayGroup = document.getElementById('group-price-day');
+      const hourInput = document.getElementById('product-price-hour');
+      const dayInput = document.getElementById('product-price-day');
+
+      if (mode === 'hour') {
+        hourGroup.style.display = 'block';
+        hourInput.required = true;
+        dayGroup.style.display = 'none';
+        dayInput.required = false;
+      } else if (mode === 'day') {
+        dayGroup.style.display = 'block';
+        dayInput.required = true;
+        hourGroup.style.display = 'none';
+        hourInput.required = false;
+      } else {
+        hourGroup.style.display = 'block';
+        dayGroup.style.display = 'block';
+        hourInput.required = true;
+        dayInput.required = true;
+      }
+    }
+
+    let uploadedImages = [];
+
+    function triggerFileInput() {
+      const fileInput = document.getElementById('product-file-input');
+      if (fileInput) fileInput.click();
+    }
+
+    function handleFileSelect(e) {
+      const files = e.target.files;
+      if (files && files.length > 0) {
+        processFiles(files);
+      }
+    }
+
+    function handleDragOver(e) {
+      e.preventDefault();
+      const dropzone = document.getElementById('upload-dropzone');
+      if (dropzone) dropzone.classList.add('dragover');
+    }
+
+    function handleDragLeave(e) {
+      e.preventDefault();
+      const dropzone = document.getElementById('upload-dropzone');
+      if (dropzone) dropzone.classList.remove('dragover');
+    }
+
+    function handleFileDrop(e) {
+      e.preventDefault();
+      const dropzone = document.getElementById('upload-dropzone');
+      if (dropzone) dropzone.classList.remove('dragover');
+      const files = e.dataTransfer ? e.dataTransfer.files : null;
+      if (files && files.length > 0) {
+        processFiles(files);
+      }
+    }
+
+    function processFiles(files) {
+      Array.from(files).forEach(file => {
+        if (!file.type.startsWith('image/')) {
+          Rentiwa.showToast('Please select valid image files (JPEG, PNG, WebP)', 'error');
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          uploadedImages.push(evt.target.result);
+          renderImagePreviews();
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function addPresetImage(url) {
+      if (url && !uploadedImages.includes(url)) {
+        uploadedImages.push(url);
+        renderImagePreviews();
+        document.getElementById('sample-img-select').value = '';
+      }
+    }
+
+    function addCustomUrlImage() {
+      const urlInput = document.getElementById('custom-img-url');
+      const url = urlInput ? urlInput.value.trim() : '';
+      if (url) {
+        uploadedImages.push(url);
+        urlInput.value = '';
+        renderImagePreviews();
+      } else {
+        Rentiwa.showToast('Please paste a valid image URL', 'error');
+      }
+    }
+
+    function removeImage(index) {
+      uploadedImages.splice(index, 1);
+      renderImagePreviews();
+    }
+
+    function renderImagePreviews() {
+      const container = document.getElementById('preview-grid-container');
+      if (!container) return;
+
+      if (uploadedImages.length === 0) {
+        container.innerHTML = `<div style="font-size:0.85rem; color:var(--text-muted); grid-column:1/-1; padding:12px 0;">No photos added yet. Select photos above to upload.</div>`;
+        return;
+      }
+
+      container.innerHTML = uploadedImages.map((imgUrl, idx) => `
+        <div class="image-preview-card">
+          <img src="${imgUrl}" alt="Photo ${idx + 1}">
+          <button type="button" class="preview-remove-btn" onclick="removeImage(${idx})" title="Remove photo">✕</button>
+          ${idx === 0 ? '<span class="preview-cover-badge">MAIN</span>' : ''}
+        </div>
+      `).join('');
+    }
+
+    function handleFormSubmit(e) {
+      e.preventDefault();
+
+      if (!Rentiwa.checkCanListProduct()) {
+        return;
+      }
+
+      const user = Rentiwa.getUser() || Rentiwa.defaultUser;
+
+      // Fallback if no images were manually added
+      const finalImages = uploadedImages.length > 0 
+        ? uploadedImages 
+        : ['https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80'];
+
+      const hourVal = parseInt(document.getElementById('product-price-hour').value) || 0;
+      const dayVal = parseInt(document.getElementById('product-price-day').value) || 0;
+
+      const productData = {
+        title: document.getElementById('product-title').value,
+        category: document.getElementById('product-category').value,
+        availability: document.getElementById('product-availability').value,
+        pricingType: activePricingMode,
+        priceHour: activePricingMode === 'day' ? 0 : hourVal,
+        priceDay: activePricingMode === 'hour' ? 0 : dayVal,
+        description: document.getElementById('product-desc').value,
+        images: finalImages,
+        city: 'Delhi',
+        area: document.getElementById('product-area').value,
+        location: `${document.getElementById('product-area').value}, Delhi`,
+        ownerName: user.name,
+        ownerAvatar: user.avatar,
+        ownerPhone: document.getElementById('owner-phone').value,
+        ownerWhatsapp: document.getElementById('owner-whatsapp').value,
+        rentalTerms: document.getElementById('product-terms').value || 'Aadhaar ID copy required at pick up.'
+      };
+
+      const newProd = Rentiwa.saveProduct(productData);
+      Rentiwa.showToast('🎉 Product listed successfully!', 'success');
+
+      setTimeout(() => {
+        window.location.href = `/pages/listing.html?id=${newProd.id}`;
+      }, 800);
+    }
+  </script>
+</body>
+</html>

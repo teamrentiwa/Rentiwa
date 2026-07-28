@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Profile & Dashboard - RENTIWA Narela</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <div id="navbar-container"></div>
+
+  <main class="container" style="padding-top:36px;">
+    <!-- PROFILE GRID -->
+    <div class="profile-grid">
+      <!-- SIDEBAR -->
+      <div class="profile-sidebar">
+        <img id="profile-img" src="" class="profile-avatar-large" alt="User">
+
+        <div>
+          <h2 class="heading-sm" id="profile-name">User Name</h2>
+          <p style="font-size:0.82rem; color:var(--text-muted);" id="profile-email">email@gmail.com</p>
+          <div style="font-size:0.8rem; color:var(--primary-dark); font-weight:600; margin-top:4px;">📍 Narela (Delhi)</div>
+        </div>
+
+        <div style="background:var(--bg-secondary); padding:14px; border-radius:var(--radius-md); text-align:left;">
+          <div style="font-size:0.75rem; color:var(--text-muted); font-weight:700;">CURRENT PLAN</div>
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-top:4px;">
+            <span id="profile-plan-badge" class="badge badge-green">Free Plan</span>
+            <span style="font-size:0.8rem; font-weight:600;" id="profile-listings-usage">2/5 used</span>
+          </div>
+        </div>
+
+        <button onclick="Rentiwa.openPremiumUpgradeModal()" class="btn btn-outline btn-full btn-sm">
+          ⭐ Upgrade to Premium (₹21)
+        </button>
+
+        <hr style="border:none; border-top:1px solid var(--border-subtle);">
+
+        <button onclick="Rentiwa.logout()" class="btn btn-secondary btn-full btn-sm" style="color:#ef4444;">
+          Logout
+        </button>
+      </div>
+
+      <!-- MAIN CONTENT TABS -->
+      <div>
+        <div class="profile-nav">
+          <button class="profile-nav-btn active" onclick="switchProfileTab('listings', this)">My Listings</button>
+          <button class="profile-nav-btn" onclick="switchProfileTab('favorites', this)">Favorites</button>
+        </div>
+
+        <!-- TAB CONTENT: MY LISTINGS -->
+        <div id="tab-listings" class="tab-pane">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+            <h3 class="heading-sm">Active Product Listings</h3>
+            <button onclick="Rentiwa.handleListButtonClick()" class="btn btn-primary btn-sm">
+              + Add New Listing
+            </button>
+          </div>
+
+          <div class="products-grid" id="my-listings-grid">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- TAB CONTENT: FAVORITES -->
+        <div id="tab-favorites" class="tab-pane" style="display:none;">
+          <h3 class="heading-sm" style="margin-bottom:20px;">Saved Favorites</h3>
+          <div class="products-grid" id="my-favorites-grid">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="footer-container"></div>
+
+  <script type="module" src="/js/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const user = Rentiwa.getUser();
+      if (!user) {
+        Rentiwa.loginAsDefaultUser();
+      }
+
+      const activeUser = Rentiwa.getUser() || Rentiwa.defaultUser;
+      document.getElementById('profile-name').innerText = activeUser.name;
+      document.getElementById('profile-email').innerText = activeUser.email;
+      document.getElementById('profile-img').src = activeUser.avatar;
+
+      if (activeUser.plan === 'premium') {
+        document.getElementById('profile-plan-badge').innerText = '⭐ Premium Plan';
+        document.getElementById('profile-plan-badge').className = 'badge badge-amber';
+        document.getElementById('profile-listings-usage').innerText = 'Unlimited';
+      } else {
+        const count = activeUser.listingsCount || 2;
+        document.getElementById('profile-listings-usage').innerText = `${count}/5 used`;
+      }
+
+      renderMyListings(activeUser.name);
+      renderMyFavorites();
+    });
+
+    function switchProfileTab(tabName, btnEl) {
+      document.querySelectorAll('.tab-pane').forEach(el => el.style.display = 'none');
+      document.querySelectorAll('.profile-nav-btn').forEach(el => el.classList.remove('active'));
+
+      document.getElementById(`tab-${tabName}`).style.display = 'block';
+      btnEl.classList.add('active');
+    }
+
+    function renderMyListings(userName) {
+      const grid = document.getElementById('my-listings-grid');
+      const products = Rentiwa.getProducts().filter(p => p.ownerName === userName || p.id.startsWith('p_'));
+
+      if (products.length === 0) {
+        grid.innerHTML = `<p style="grid-column:1/-1; color:var(--text-muted); text-align:center; padding:30px 0;">You haven't listed any products yet. Click + Add New Listing!</p>`;
+        return;
+      }
+
+      grid.innerHTML = products.map(p => {
+        return Rentiwa.renderProductCardHTML(p, {
+          onDeleteCallback: '() => renderMyListings("' + userName + '")'
+        });
+      }).join('');
+    }
+
+    function deleteMyListing(id) {
+      Rentiwa.confirmAndDeleteListing(id, () => {
+        const user = Rentiwa.getUser() || Rentiwa.defaultUser;
+        renderMyListings(user ? user.name : '');
+      });
+    }
+
+    function renderMyFavorites() {
+      const grid = document.getElementById('my-favorites-grid');
+      const favIds = Rentiwa.getFavorites();
+      const allProducts = Rentiwa.getProducts();
+      const favProducts = allProducts.filter(p => favIds.includes(p.id));
+
+      if (favProducts.length === 0) {
+        grid.innerHTML = `<p style="grid-column:1/-1; color:var(--text-muted);">No saved favorites yet.</p>`;
+        return;
+      }
+
+      grid.innerHTML = favProducts.map(p => {
+        return Rentiwa.renderProductCardHTML(p, {
+          onFavToggle: 'renderMyFavorites()'
+        });
+      }).join('');
+    }
+  </script>
+</body>
+</html>

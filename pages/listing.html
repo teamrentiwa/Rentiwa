@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product Rental Details - RENTIWA Narela</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <div id="navbar-container"></div>
+
+  <main class="container" style="padding-top:32px;">
+    <!-- Breadcrumb -->
+    <div style="display:flex; align-items:center; gap:8px; font-size:0.88rem; color:var(--text-muted); margin-bottom:20px;">
+      <a href="/">Home</a> <span>/</span>
+      <a href="/#browse">Rentals</a> <span>/</span>
+      <span id="breadcrumb-title" style="color:var(--dark); font-weight:600;">Product Details</span>
+    </div>
+
+    <!-- MAIN PRODUCT DETAILS GRID -->
+    <div class="listing-details-grid">
+      <!-- LEFT: GALLERY & DESCRIPTION -->
+      <div>
+        <div class="gallery-main">
+          <img id="main-product-img" src="" alt="Product Image">
+        </div>
+        <div class="gallery-thumbs" id="gallery-thumbs-box">
+          <!-- Thumbnails injected dynamically -->
+        </div>
+
+        <!-- Description Box -->
+        <div style="margin-top:36px; background:#fff; border:1px solid var(--border-light); border-radius:var(--radius-xl); padding:28px; box-shadow:var(--shadow-sm);">
+          <h2 class="heading-md" style="margin-bottom:12px;">Product Description</h2>
+          <p id="product-desc" style="font-size:0.95rem; color:var(--dark-muted); line-height:1.7; white-space:pre-line;">
+            Loading product description...
+          </p>
+
+          <hr style="border:none; border-top:1px solid var(--border-subtle); margin:24px 0;">
+
+          <h3 class="heading-sm" style="margin-bottom:10px;">Rental Terms & Security Requirements</h3>
+          <div style="background:var(--bg-secondary); padding:16px; border-radius:var(--radius-md); border-left:4px solid var(--primary);">
+            <p id="product-terms" style="font-size:0.88rem; color:var(--dark-muted);">
+              Aadhaar Card copy + local address proof required at pick up.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: PRICE & OWNER CONTACT CARD -->
+      <div>
+        <div class="owner-card">
+          <div style="display:flex; align-items:center; justify-content:space-between;">
+            <span class="badge badge-primary" id="detail-category">Photography</span>
+            <span class="badge badge-green" id="detail-availability">Available Now</span>
+          </div>
+
+          <h1 class="heading-md" id="detail-title">Loading Product...</h1>
+
+          <div style="display:flex; align-items:center; gap:8px; font-size:0.88rem; color:var(--text-muted);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+            <span id="detail-location">Narela, Delhi</span>
+          </div>
+
+          <div style="background:var(--bg-secondary); padding:20px; border-radius:var(--radius-md); border:1px solid var(--border-light);" id="detail-prices-box">
+            <!-- Rendered dynamically -->
+          </div>
+
+          <!-- OWNER PROFILE INFO -->
+          <div style="display:flex; align-items:center; gap:16px; padding-top:8px;">
+            <img id="owner-avatar" src="" style="width:52px; height:52px; border-radius:50%; object-fit:cover;" alt="Owner">
+            <div>
+              <div style="font-weight:700; font-size:1rem;" id="owner-name">Owner Name</div>
+              <div style="display:flex; align-items:center; gap:6px; font-size:0.82rem; color:var(--text-muted);">
+                <span style="color:#f59e0b; font-weight:700;">★ <span id="owner-rating">4.9</span></span>
+                <span>• Joined <span id="owner-joined">Jan 2026</span></span>
+              </div>
+            </div>
+          </div>
+
+          <hr style="border:none; border-top:1px solid var(--border-subtle);">
+
+          <!-- PHONE & CONTACT UNLOCK BOX -->
+          <div id="contact-action-box">
+            <!-- Rendered dynamically depending on Auth state -->
+          </div>
+        </div>
+
+        <!-- SAFETY TIP CARD -->
+        <div style="margin-top:20px; background:var(--bg-secondary); border:1px solid var(--border-light); border-radius:var(--radius-lg); padding:20px; display:flex; gap:12px; align-items:flex-start;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--primary); flex-shrink:0;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          <div style="font-size:0.82rem; color:var(--dark-muted); line-height:1.5;">
+            <strong>Rentiwa Safety First:</strong> Inspect product condition before taking delivery. Verify original Aadhaar card of both parties. Pay rent upon physical pickup.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIMILAR PRODUCTS SECTION -->
+    <section style="margin:60px 0;">
+      <h2 class="heading-md" style="margin-bottom:20px;">Similar Rentals in Narela</h2>
+      <div class="products-grid" id="similar-products-grid">
+        <!-- Injected dynamically -->
+      </div>
+    </section>
+  </main>
+
+  <div id="footer-container"></div>
+
+  <script type="module" src="/js/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const productId = urlParams.get('id') || 'p1';
+      const product = Rentiwa.getProductById(productId);
+
+      if (product) {
+        document.title = `${product.title} - Rent in Narela | RENTIWA`;
+        document.getElementById('breadcrumb-title').innerText = product.title;
+        document.getElementById('detail-title').innerText = product.title;
+        document.getElementById('detail-category').innerText = product.category;
+        document.getElementById('detail-availability').innerText = `● ${product.availability}`;
+        document.getElementById('detail-location').innerText = product.location;
+        
+        const priceBox = document.getElementById('detail-prices-box');
+        if (priceBox) {
+          priceBox.innerHTML = `
+            <div style="font-size:1.4rem; font-weight:800; color:var(--primary-dark); display:flex; gap:16px; align-items:center;">
+              ${Rentiwa.formatProductPrice(product)}
+            </div>
+          `;
+        }
+
+        document.getElementById('product-desc').innerText = product.description;
+        document.getElementById('product-terms').innerText = product.rentalTerms || 'Govt ID verification required at pick up.';
+
+        document.getElementById('owner-name').innerText = product.ownerName;
+        document.getElementById('owner-avatar').src = product.ownerAvatar;
+        document.getElementById('owner-rating').innerText = product.ownerRating || '4.9';
+        document.getElementById('owner-joined').innerText = product.ownerJoined || '2026';
+
+        // Gallery
+        const mainImg = document.getElementById('main-product-img');
+        mainImg.src = product.images[0];
+
+        const thumbsBox = document.getElementById('gallery-thumbs-box');
+        thumbsBox.innerHTML = product.images.map((imgUrl, idx) => `
+          <div class="gallery-thumb ${idx === 0 ? 'active' : ''}" onclick="switchGalleryImage('${imgUrl}', this)">
+            <img src="${imgUrl}" alt="Thumb">
+          </div>
+        `).join('');
+
+        // Contact Box Logic (Logged Out vs Logged In)
+        renderContactBox(product);
+
+        // Similar Products
+        renderSimilarProducts(product.category, product.id);
+      }
+    });
+
+    function switchGalleryImage(url, thumbEl) {
+      document.getElementById('main-product-img').src = url;
+      document.querySelectorAll('.gallery-thumb').forEach(el => el.classList.remove('active'));
+      thumbEl.classList.add('active');
+    }
+
+    function deleteProductFromDetail(productId) {
+      Rentiwa.confirmAndDeleteListing(productId, () => {
+        setTimeout(() => {
+          window.location.href = '/pages/all-listings.html';
+        }, 300);
+      });
+    }
+
+    function renderContactBox(product) {
+      const contactBox = document.getElementById('contact-action-box');
+      const user = Rentiwa.getUser();
+
+      const isOwner = user && (
+        user.name === product.ownerName || 
+        user.email === product.ownerEmail || 
+        product.id.startsWith('p_')
+      );
+
+      let deleteBtnHTML = `
+        <div style="margin-top:16px; padding-top:16px; border-top:1px dashed var(--border-light);">
+          <button onclick="deleteProductFromDetail('${product.id}')" class="btn btn-outline btn-full btn-sm" style="color:#ef4444; border-color:rgba(239, 68, 68, 0.4); background:#fff;">
+            🗑️ Delete This Listing
+          </button>
+        </div>
+      `;
+
+      if (!user) {
+        contactBox.innerHTML = `
+          <div class="contact-locked-box">
+            <div style="font-size:1.5rem;">🔒</div>
+            <div>
+              <div style="font-weight:700; font-size:1rem; color:var(--dark);">Phone Number Hidden</div>
+              <div style="font-size:0.82rem; color:var(--text-muted); margin-top:2px;">
+                Owner phone: +91 98*** *****
+              </div>
+            </div>
+            <button onclick="Rentiwa.openLoginModal()" class="btn btn-primary btn-full">
+              Login to Contact Owner
+            </button>
+          </div>
+          ${deleteBtnHTML}
+        `;
+      } else {
+        const encodedMsg = encodeURIComponent(`Hi ${product.ownerName}, I saw your listing for "${product.title}" on Rentiwa and would like to rent it in Narela.`);
+        const whatsappUrl = `https://wa.me/${product.ownerWhatsapp}?text=${encodedMsg}`;
+
+        contactBox.innerHTML = `
+          <div style="display:flex; flex-direction:column; gap:12px;">
+            ${isOwner ? `
+              <div style="background:#fff7ed; border:1px solid #ffedd5; padding:12px 16px; border-radius:var(--radius-md); font-size:0.85rem; color:#9a3412; font-weight:600; display:flex; align-items:center; gap:8px;">
+                <span>✨</span> You are the owner of this rental listing
+              </div>
+            ` : ''}
+
+            <div style="background:var(--primary-light); padding:16px; border-radius:var(--radius-md); text-align:center;">
+              <div style="font-size:0.78rem; color:var(--primary-dark); font-weight:700; text-transform:uppercase;">Owner Direct Contact</div>
+              <div style="font-family:var(--font-heading); font-size:1.3rem; font-weight:800; color:var(--dark); margin-top:4px;">
+                📞 ${product.ownerPhone}
+              </div>
+            </div>
+
+            <a href="${whatsappUrl}" target="_blank" class="btn btn-primary btn-full btn-lg" style="background:#25D366; box-shadow:0 8px 24px rgba(37,211,102,0.25);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+              Chat on WhatsApp
+            </a>
+
+            <a href="tel:${product.ownerPhone}" class="btn btn-secondary btn-full">
+              Call Owner Directly
+            </a>
+
+            ${deleteBtnHTML}
+          </div>
+        `;
+      }
+    }
+
+    function renderSimilarProducts(cat, currentId) {
+      const grid = document.getElementById('similar-products-grid');
+      const products = Rentiwa.getProducts().filter(p => p.id !== currentId && p.category === cat).slice(0, 3);
+
+      if (products.length === 0) {
+        grid.innerHTML = `<p style="font-size:0.9rem; color:var(--text-muted);">No other products in this category yet.</p>`;
+        return;
+      }
+
+      grid.innerHTML = products.map(p => `
+        <div class="product-card">
+          <div class="product-image-container">
+            <img src="${p.images[0]}" class="product-image" alt="${p.title}">
+          </div>
+          <div class="product-body">
+            <h3 class="product-title" style="font-size:0.95rem;">${p.title}</h3>
+            <div class="product-prices">
+              ${Rentiwa.formatProductPrice(p)}
+            </div>
+            <a href="/pages/listing.html?id=${p.id}" class="btn btn-secondary btn-sm" style="margin-top:10px;">
+              View Listing
+            </a>
+          </div>
+        </div>
+      `).join('');
+    }
+  </script>
+</body>
+</html>
