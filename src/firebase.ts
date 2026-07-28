@@ -109,7 +109,7 @@ export async function fetchListingsFromFirestore() {
     listings.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     return listings;
   } catch (err) {
-    console.error("Error fetching listings from Firestore:", err);
+    console.warn("Firestore fetch notice (using local storage fallback if needed):", err);
     return null;
   }
 }
