@@ -326,7 +326,7 @@
       `).join('');
     }
 
-    async function handleFormSubmit(e) {
+    function handleFormSubmit(e) {
       e.preventDefault();
 
       if (!Rentiwa.checkCanListProduct()) {
@@ -336,7 +336,7 @@
       const submitBtn = document.querySelector('#add-listing-form button[type="submit"]');
       if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.innerHTML = `<span>Uploading & Saving to Firestore...</span>`;
+        submitBtn.innerHTML = `<span>Saving Listing...</span>`;
       }
 
       const user = Rentiwa.getUser() || Rentiwa.defaultUser;
@@ -369,15 +369,15 @@
       };
 
       try {
-        const newProd = await Rentiwa.saveProduct(productData);
-        Rentiwa.showToast('🎉 Product listed in Firestore successfully!', 'success');
+        const newProd = Rentiwa.saveProduct(productData);
+        Rentiwa.showToast('🎉 Product listed successfully!', 'success');
 
         setTimeout(() => {
           window.location.href = `/pages/listing.html?id=${newProd.id}`;
         }, 800);
       } catch (err) {
         console.error(err);
-        Rentiwa.showToast('Error saving listing to Firestore. Saved locally instead.', 'info');
+        Rentiwa.showToast('Error saving listing.', 'error');
         if (submitBtn) {
           submitBtn.disabled = false;
           submitBtn.innerHTML = `<span>Post Listing</span>`;

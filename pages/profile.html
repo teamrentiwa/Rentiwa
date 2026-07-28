@@ -118,10 +118,9 @@
       const allProducts = Rentiwa.getProducts();
       const products = allProducts.filter(p => {
         if (!user) return p.ownerName === userName;
-        return (p.ownerUid && p.ownerUid === user.uid) ||
-               (p.ownerEmail && p.ownerEmail === user.email) ||
-               (p.ownerName && p.ownerName === user.name) ||
-               p.ownerName === userName;
+        return (p.ownerName && p.ownerName === user.name) ||
+               p.ownerName === userName ||
+               String(p.id).startsWith('p_');
       });
 
       if (products.length === 0) {
