@@ -42,6 +42,7 @@ export interface SaveListingParams {
   category: string;
   price: number;
   location: string;
+  images?: string[];
 }
 
 export const saveListingToFirestore = async (params: SaveListingParams) => {
@@ -55,6 +56,7 @@ export const saveListingToFirestore = async (params: SaveListingParams) => {
   const category = (params.category || "").trim();
   const location = (params.location || "").trim();
   const price = Number(params.price);
+  const images = Array.isArray(params.images) ? params.images : [];
 
   if (!title) throw new Error("Title is required.");
   if (!description) throw new Error("Description is required.");
@@ -68,6 +70,7 @@ export const saveListingToFirestore = async (params: SaveListingParams) => {
     category,
     price,
     location,
+    images,
     ownerId: currentUser.uid,
     ownerName: currentUser.displayName || '',
     ownerEmail: currentUser.email || '',

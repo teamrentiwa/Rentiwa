@@ -274,17 +274,29 @@
           Rentiwa.showToast('Please select valid image files (JPEG, PNG, WebP)', 'error');
           return;
         }
+        if (uploadedImages.length >= 2) {
+          Rentiwa.showToast('Maximum 2 images allowed', 'error');
+          return;
+        }
         const reader = new FileReader();
         reader.onload = (evt) => {
-          uploadedImages.push(evt.target.result);
-          renderImagePreviews();
+          if (uploadedImages.length < 2) {
+            uploadedImages.push(evt.target.result);
+            renderImagePreviews();
+          }
         };
         reader.readAsDataURL(file);
       });
     }
 
     function addPresetImage(url) {
-      if (url && !uploadedImages.includes(url)) {
+      if (!url) return;
+      if (uploadedImages.length >= 2) {
+        Rentiwa.showToast('Maximum 2 images allowed', 'error');
+        document.getElementById('sample-img-select').value = '';
+        return;
+      }
+      if (!uploadedImages.includes(url)) {
         uploadedImages.push(url);
         renderImagePreviews();
         document.getElementById('sample-img-select').value = '';
@@ -294,13 +306,17 @@
     function addCustomUrlImage() {
       const urlInput = document.getElementById('custom-img-url');
       const url = urlInput ? urlInput.value.trim() : '';
-      if (url) {
-        uploadedImages.push(url);
-        urlInput.value = '';
-        renderImagePreviews();
-      } else {
+      if (!url) {
         Rentiwa.showToast('Please paste a valid image URL', 'error');
+        return;
       }
+      if (uploadedImages.length >= 2) {
+        Rentiwa.showToast('Maximum 2 images allowed', 'error');
+        return;
+      }
+      uploadedImages.push(url);
+      urlInput.value = '';
+      renderImagePreviews();
     }
 
     function removeImage(index) {
@@ -313,7 +329,7 @@
       if (!container) return;
 
       if (uploadedImages.length === 0) {
-        container.innerHTML = `<div style="font-size:0.85rem; color:var(--text-muted); grid-column:1/-1; padding:12px 0;">No photos added yet. Select photos above to upload.</div>`;
+        container.innerHTML = `<div style="font-size:0.85rem; color:var(--text-muted); grid-column:1/-1; padding:12px 0;">No photos added yet. Select 1 or 2 photos above to upload.</div>`;
         return;
       }
 
@@ -326,12 +342,45 @@
       `).join('');
     }
 
+    async function uploadToCloudinary(imageSource) {
+      const cloudName = 'nk1yrvhm';
+      const uploadPreset = 'rentiwa_upload';
+      const url = `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`;
+
+      const formData = new FormData();
+      formData.append('upload_preset', uploadPreset);
+      formData.append('file', imageSource);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        let errorMsg = `Upload failed with status ${response.status}`;
+        try {
+          const errData = await response.json();
+          if (errData.error && errData.error.message) {
+            errorMsg = errData.error.message;
+          }
+        } catch (e) {}
+        throw new Error(errorMsg);
+      }
+
+      const data = await response.json();
+      if (!data.secure_url) {
+        throw new Error('Cloudinary response missing secure_url');
+      }
+
+      return data.secure_url;
+    }
+
     async function handleFormSubmit(e) {
       e.preventDefault();
 
       const submitBtn = document.querySelector('#add-listing-form button[type="submit"]');
 
-      // 1. Gather & validate inputs
+      // 1. Gather & validate text inputs
       const title = (document.getElementById('product-title').value || '').trim();
       const category = (document.getElementById('product-category').value || '').trim();
       const description = (document.getElementById('product-desc').value || '').trim();
@@ -341,10 +390,6 @@
       const hourVal = parseInt(document.getElementById('product-price-hour').value) || 0;
       const dayVal = parseInt(document.getElementById('product-price-day').value) || 0;
       const price = activePricingMode === 'hour' ? hourVal : (dayVal || hourVal);
-
-      const finalImages = uploadedImages.length > 0 
-        ? uploadedImages 
-        : ['https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80'];
 
       if (!title) {
         Rentiwa.showToast('Please enter a product name', 'error');
@@ -363,9 +408,44 @@
         return;
       }
 
-      // 2. Disable submit button while saving
+      // Validate image count (Min = 1, Max = 2)
+      if (uploadedImages.length < 1) {
+        Rentiwa.showToast('Please select at least 1 image (maximum 2 allowed).', 'error');
+        return;
+      }
+      if (uploadedImages.length > 2) {
+        Rentiwa.showToast('Maximum 2 images allowed.', 'error');
+        return;
+      }
+
+      // 2. Disable submit button while uploading
       if (submitBtn) {
         submitBtn.disabled = true;
+        submitBtn.innerHTML = `<span>Uploading Images...</span>`;
+      }
+
+      // 3. Upload images to Cloudinary
+      const cloudinaryUrls = [];
+      try {
+        for (let i = 0; i < uploadedImages.length; i++) {
+          if (submitBtn) {
+            submitBtn.innerHTML = `<span>Uploading Image ${i + 1} of ${uploadedImages.length}...</span>`;
+          }
+          const secureUrl = await uploadToCloudinary(uploadedImages[i]);
+          cloudinaryUrls.push(secureUrl);
+        }
+      } catch (uploadErr) {
+        console.error("Cloudinary upload failed:", uploadErr);
+        Rentiwa.showToast(`Image upload failed: ${uploadErr.message}`, 'error');
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = `<span>Submit Product Listing</span>`;
+        }
+        return; // Stop execution; do NOT create Firestore listing
+      }
+
+      // 4. Save listing data with Cloudinary secure_urls into Firestore
+      if (submitBtn) {
         submitBtn.innerHTML = `<span>Saving Listing...</span>`;
       }
 
@@ -374,7 +454,8 @@
         category,
         description,
         price,
-        location
+        location,
+        images: cloudinaryUrls
       };
 
       try {
