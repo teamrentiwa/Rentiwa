@@ -109,9 +109,9 @@
 
   <script type="module" src="/js/app.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
+    function loadListingDetails() {
       const urlParams = new URLSearchParams(window.location.search);
-      const productId = urlParams.get('id') || 'p1';
+      const productId = urlParams.get('id');
       const product = Rentiwa.getProductById(productId);
 
       if (product) {
@@ -141,14 +141,18 @@
 
         // Gallery
         const mainImg = document.getElementById('main-product-img');
-        mainImg.src = product.images[0];
+        if (mainImg && product.images && product.images[0]) {
+          mainImg.src = product.images[0];
+        }
 
         const thumbsBox = document.getElementById('gallery-thumbs-box');
-        thumbsBox.innerHTML = product.images.map((imgUrl, idx) => `
-          <div class="gallery-thumb ${idx === 0 ? 'active' : ''}" onclick="switchGalleryImage('${imgUrl}', this)">
-            <img src="${imgUrl}" alt="Thumb">
-          </div>
-        `).join('');
+        if (thumbsBox && product.images) {
+          thumbsBox.innerHTML = product.images.map((imgUrl, idx) => `
+            <div class="gallery-thumb ${idx === 0 ? 'active' : ''}" onclick="switchGalleryImage('${imgUrl}', this)">
+              <img src="${imgUrl}" alt="Thumb">
+            </div>
+          `).join('');
+        }
 
         // Contact Box Logic (Logged Out vs Logged In)
         renderContactBox(product);
@@ -156,6 +160,12 @@
         // Similar Products
         renderSimilarProducts(product.category, product.id);
       }
+    }
+
+    window.loadListingDetails = loadListingDetails;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadListingDetails();
     });
 
     function switchGalleryImage(url, thumbEl) {

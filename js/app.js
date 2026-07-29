@@ -4,13 +4,18 @@
  * Phase 1 MVP - Narela (Delhi) Initial Launch
  */
 
-import { auth, signInWithGoogle, logoutGoogle, onAuthChange, saveListingToFirestore } from '/src/firebase.ts';
+import { auth, signInWithGoogle, logoutGoogle, onAuthChange, saveListingToFirestore, fetchActiveListingsFromFirestore, getListingByIdFromFirestore } from '/src/firebase.ts';
 
 // Global State Manager
 const Rentiwa = {
   // Auth State
   currentAuthUser: null,
   isAuthLoading: true,
+
+  // Firestore Listings State
+  firestoreListings: [],
+  isListingsLoading: false,
+  listingsLoaded: false,
 
   // Key constants
   STORAGE_PRODUCTS_KEY: 'rentiwa_products',
@@ -77,6 +82,7 @@ const Rentiwa = {
     this.setupAuthListener();
     this.renderHeaderAndFooter();
     this.bindGlobalEvents();
+    this.fetchListings();
   },
 
   setupAuthListener() {
@@ -125,17 +131,87 @@ const Rentiwa = {
     }
   },
 
+  async fetchListings() {
+    this.isListingsLoading = true;
+    try {
+      const rawDocs = await fetchActiveListingsFromFirestore();
+      this.firestoreListings = rawDocs.map(d => this.mapFirestoreDocToProduct(d));
+      this.listingsLoaded = true;
+    } catch (err) {
+      console.error("Error fetching Firestore listings:", err);
+      this.firestoreListings = [];
+      this.listingsLoaded = true;
+    } finally {
+      this.isListingsLoading = false;
+      if (typeof window.filterHomeProducts === 'function') {
+        window.filterHomeProducts();
+      }
+      if (typeof window.applyFilters === 'function') {
+        window.applyFilters();
+      }
+      if (typeof window.renderMyListings === 'function') {
+        const user = this.getUser();
+        window.renderMyListings(user ? user.name : '');
+      }
+      if (typeof window.loadListingDetails === 'function') {
+        window.loadListingDetails();
+      }
+    }
+    return this.firestoreListings;
+  },
+
+  mapFirestoreDocToProduct(d) {
+    const images = Array.isArray(d.images) && d.images.length > 0 
+      ? d.images 
+      : ['https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80'];
+    const loc = d.location || 'Narela, Delhi';
+    const areaPart = loc.split(',')[0].trim() || 'Narela';
+
+    return {
+      id: d.id,
+      title: d.title || 'Untitled Listing',
+      description: d.description || '',
+      category: d.category || 'Other',
+      price: Number(d.price) || 0,
+      priceDay: Number(d.price) || 0,
+      priceHour: Number(d.price) || 0,
+      pricingType: 'day',
+      location: loc,
+      area: areaPart,
+      city: 'Delhi',
+      images: images,
+      ownerId: d.ownerId || '',
+      ownerUid: d.ownerId || '',
+      ownerName: d.ownerName || 'Rentiwa User',
+      ownerEmail: d.ownerEmail || '',
+      ownerPhone: d.ownerPhone || '+91 98765 00112',
+      ownerWhatsapp: d.ownerWhatsapp || '+91 98765 00112',
+      ownerAvatar: d.ownerAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+      status: d.status || 'active',
+      createdAt: d.createdAt,
+      availability: 'Available',
+      rating: 5.0,
+      reviewCount: 1,
+      rentalTerms: 'Aadhaar ID copy required at pick up.'
+    };
+  },
+
   getProducts() {
-    return JSON.parse(localStorage.getItem(this.STORAGE_PRODUCTS_KEY) || '[]');
+    if (!this.listingsLoaded && !this.isListingsLoading) {
+      this.fetchListings();
+    }
+    return this.firestoreListings;
   },
 
   getProductById(id) {
-    const products = this.getProducts();
-    return products.find(p => p.id === id) || products[0];
+    if (!id) return this.firestoreListings[0] || null;
+    return this.firestoreListings.find(p => p.id === id || String(p.id) === String(id)) || null;
   },
 
   async saveProduct(productData) {
-    return await saveListingToFirestore(productData);
+    const result = await saveListingToFirestore(productData);
+    await this.fetchListings();
+    return result;
   },
 
   getRequests() {

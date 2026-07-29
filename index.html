@@ -247,6 +247,17 @@
       const grid = document.getElementById('home-products-grid');
       const countEl = document.getElementById('product-count-badge');
 
+      if (Rentiwa.isListingsLoading) {
+        if (grid) {
+          grid.innerHTML = `
+            <div style="grid-column: 1/-1; text-align:center; padding:60px 20px; background:var(--bg-secondary); border-radius:var(--radius-lg);">
+              <p style="font-size:1rem; color:var(--text-muted);">Loading listings from Firestore...</p>
+            </div>
+          `;
+        }
+        return;
+      }
+
       const allProducts = Rentiwa.getProducts();
       const favs = Rentiwa.getFavorites();
 

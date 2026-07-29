@@ -11,7 +11,13 @@ import {
   getFirestore, 
   collection, 
   addDoc, 
-  serverTimestamp 
+  serverTimestamp,
+  getDocs,
+  doc,
+  getDoc,
+  query,
+  where,
+  orderBy
 } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -36,7 +42,6 @@ export interface SaveListingParams {
   category: string;
   price: number;
   location: string;
-  images: string[];
 }
 
 export const saveListingToFirestore = async (params: SaveListingParams) => {
@@ -50,14 +55,12 @@ export const saveListingToFirestore = async (params: SaveListingParams) => {
   const category = (params.category || "").trim();
   const location = (params.location || "").trim();
   const price = Number(params.price);
-  const images = Array.isArray(params.images) && params.images.length > 0 ? params.images : [];
 
   if (!title) throw new Error("Title is required.");
   if (!description) throw new Error("Description is required.");
   if (!category) throw new Error("Category is required.");
   if (!location) throw new Error("Location is required.");
   if (isNaN(price) || price <= 0) throw new Error("Valid price is required.");
-  if (images.length === 0) throw new Error("At least one image is required.");
 
   const listingDoc = {
     title,
@@ -65,9 +68,8 @@ export const saveListingToFirestore = async (params: SaveListingParams) => {
     category,
     price,
     location,
-    images,
     ownerId: currentUser.uid,
-    ownerName: currentUser.displayName || 'Rentiwa User',
+    ownerName: currentUser.displayName || '',
     ownerEmail: currentUser.email || '',
     createdAt: serverTimestamp(),
     status: 'active'
@@ -108,4 +110,66 @@ export const logoutGoogle = async (): Promise<void> => {
 
 export const onAuthChange = (callback: (user: User | null) => void) => {
   return onAuthStateChanged(auth, callback);
+};
+
+export const fetchActiveListingsFromFirestore = async () => {
+  const listingsRef = collection(db, "listings");
+  try {
+    const q = query(
+      listingsRef,
+      where("status", "==", "active"),
+      orderBy("createdAt", "desc")
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(docSnap => {
+      const data = docSnap.data();
+      return {
+        id: docSnap.id,
+        ...data,
+        createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : (data.createdAt || Date.now())
+      };
+    });
+  } catch (err) {
+    console.warn("Firestore query with orderBy failed, attempting fallback query without orderBy:", err);
+    try {
+      const qFallback = query(listingsRef, where("status", "==", "active"));
+      const snapshot = await getDocs(qFallback);
+      const docs = snapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        return {
+          id: docSnap.id,
+          ...data,
+          createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : (data.createdAt || Date.now())
+        };
+      });
+      docs.sort((a, b) => {
+        const timeA = typeof a.createdAt === 'number' ? a.createdAt : 0;
+        const timeB = typeof b.createdAt === 'number' ? b.createdAt : 0;
+        return timeB - timeA;
+      });
+      return docs;
+    } catch (fallbackErr) {
+      console.warn("Firestore fallback query failed:", fallbackErr);
+      return [];
+    }
+  }
+};
+
+export const getListingByIdFromFirestore = async (id: string) => {
+  try {
+    const docRef = doc(db, "listings", id);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      return {
+        id: docSnap.id,
+        ...data,
+        createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : (data.createdAt || Date.now())
+      };
+    }
+    return null;
+  } catch (err) {
+    console.error("Error getting listing by ID from Firestore:", err);
+    return null;
+  }
 };
