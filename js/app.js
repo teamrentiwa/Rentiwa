@@ -4,7 +4,7 @@
  * Phase 1 MVP - Narela (Delhi) Initial Launch
  */
 
-import { auth, signInWithGoogle, logoutGoogle, onAuthChange } from '/src/firebase.ts';
+import { auth, signInWithGoogle, logoutGoogle, onAuthChange, saveListingToFirestore } from '/src/firebase.ts';
 
 // Global State Manager
 const Rentiwa = {
@@ -134,53 +134,8 @@ const Rentiwa = {
     return products.find(p => p.id === id) || products[0];
   },
 
-  saveProduct(productData) {
-    const user = this.getUser();
-
-    let processedImages = [];
-    if (productData.images && productData.images.length > 0) {
-      processedImages = productData.images.map(imgItem => {
-        if (typeof imgItem === 'string') return imgItem;
-        return 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80';
-      });
-    }
-
-    if (processedImages.length === 0) {
-      processedImages = ['https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80'];
-    }
-
-    const newProduct = {
-      id: 'p_' + Date.now(),
-      title: productData.title || 'Untitled Item',
-      category: productData.category || 'Tools',
-      availability: productData.availability || 'Available',
-      pricingType: productData.pricingType || 'both',
-      priceHour: Number(productData.priceHour) || 0,
-      priceDay: Number(productData.priceDay) || 0,
-      description: productData.description || '',
-      images: processedImages,
-      city: productData.city || 'Delhi',
-      area: productData.area || 'Narela',
-      location: productData.location || `${productData.area || 'Narela'}, Delhi`,
-      ownerName: user ? user.name : (productData.ownerName || 'Rentiwa User'),
-      ownerAvatar: user ? user.avatar : (productData.ownerAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'),
-      ownerPhone: productData.ownerPhone || (user ? user.phone : '+91 98765 00112'),
-      ownerWhatsapp: productData.ownerWhatsapp || (user ? user.phone : '+91 98765 00112'),
-      rentalTerms: productData.rentalTerms || 'Aadhaar ID copy required at pick up.',
-      rating: 5.0,
-      reviewCount: 1,
-      createdAt: Date.now()
-    };
-
-    const products = this.getProducts();
-    products.unshift(newProduct);
-    localStorage.setItem(this.STORAGE_PRODUCTS_KEY, JSON.stringify(products));
-
-    if (user) {
-      user.listingsCount = (user.listingsCount || 0) + 1;
-      this.setUser(user);
-    }
-    return newProduct;
+  async saveProduct(productData) {
+    return await saveListingToFirestore(productData);
   },
 
   getRequests() {
