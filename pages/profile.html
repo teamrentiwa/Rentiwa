@@ -132,13 +132,12 @@
       const grid = document.getElementById('my-listings-grid');
       if (!grid) return;
       const user = Rentiwa.getUser();
+      if (!user) {
+        grid.innerHTML = `<p style="grid-column:1/-1; color:var(--text-muted); text-align:center; padding:30px 0;">Please log in to view your listings.</p>`;
+        return;
+      }
       const allProducts = Rentiwa.getProducts();
-      const products = allProducts.filter(p => {
-        if (!user) return p.ownerName === userName;
-        return (p.ownerName && p.ownerName === user.name) ||
-               p.ownerName === userName ||
-               String(p.id).startsWith('p_');
-      });
+      const products = allProducts.filter(p => p.ownerId === user.uid || p.ownerUid === user.uid);
 
       if (products.length === 0) {
         grid.innerHTML = `<p style="grid-column:1/-1; color:var(--text-muted); text-align:center; padding:30px 0;">You haven't listed any products yet. Click + Add New Listing!</p>`;
@@ -147,7 +146,7 @@
 
       grid.innerHTML = products.map(p => {
         return Rentiwa.renderProductCardHTML(p, {
-          onDeleteCallback: '() => renderMyListings("' + userName + '")'
+          onDeleteCallback: '() => renderMyListings("' + (user.name || userName) + '")'
         });
       }).join('');
     }

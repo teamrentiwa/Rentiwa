@@ -4,7 +4,7 @@
  * Phase 1 MVP - Narela (Delhi) Initial Launch
  */
 
-import { auth, signInWithGoogle, logoutGoogle, onAuthChange, saveListingToFirestore, fetchActiveListingsFromFirestore, getListingByIdFromFirestore } from '/src/firebase.ts';
+import { auth, signInWithGoogle, logoutGoogle, onAuthChange, saveListingToFirestore, fetchActiveListingsFromFirestore, getListingByIdFromFirestore, deleteListingFromFirestore } from '/src/firebase.ts';
 
 // Global State Manager
 const Rentiwa = {
@@ -440,12 +440,7 @@ const Rentiwa = {
     const isFav = favs.includes(p.id) || favs.includes(String(p.id));
     const priceHTML = this.formatProductPrice(p);
     const user = this.getUser();
-    const isMyItem = user && (
-      (p.ownerUid && user.uid === p.ownerUid) ||
-      (p.ownerEmail && user.email === p.ownerEmail) ||
-      (p.ownerName && user.name === p.ownerName) ||
-      String(p.id).startsWith('p_')
-    );
+    const isMyItem = !!(user && user.uid && p.ownerId && p.ownerId === user.uid);
     const onDeleteCallbackName = options.onDeleteCallback || '';
     const onFavToggle = options.onFavToggle || '';
 
@@ -520,10 +515,15 @@ const Rentiwa = {
             </div>
 
             <div style="display:flex; gap:6px; align-items:center;">
-              ${isMyItem && onDeleteCallbackName ? `
-                <button type="button" onclick="event.stopPropagation(); Rentiwa.confirmAndDeleteListing('${p.id}', ${onDeleteCallbackName});" class="btn btn-outline btn-sm" style="color:#ef4444; border-color:rgba(239, 68, 68, 0.3); padding:5px 8px;" title="Delete Listing">
-                  🗑️
+              ${isMyItem ? `
+                <button type="button" onclick="event.stopPropagation(); Rentiwa.showToast('Edit feature coming soon!', 'info');" class="btn btn-outline btn-sm" style="color:var(--primary-dark); border-color:var(--primary); padding:5px 8px;" title="Edit Listing">
+                  ✏️
                 </button>
+                ${onDeleteCallbackName ? `
+                  <button type="button" onclick="event.stopPropagation(); Rentiwa.confirmAndDeleteListing('${p.id}', ${onDeleteCallbackName});" class="btn btn-outline btn-sm" style="color:#ef4444; border-color:rgba(239, 68, 68, 0.3); padding:5px 8px;" title="Delete Listing">
+                    🗑️
+                  </button>
+                ` : ''}
               ` : ''}
               <a href="/pages/listing.html?id=${p.id}" class="btn btn-secondary btn-sm" style="padding:6px 14px;">
                 View Details
@@ -573,9 +573,9 @@ const Rentiwa = {
 
     const confirmBtn = document.getElementById('confirm-delete-action-btn');
     if (confirmBtn) {
-      confirmBtn.onclick = () => {
+      confirmBtn.onclick = async () => {
         Rentiwa.closeModal('delete-confirm-modal-overlay');
-        const success = Rentiwa.deleteListing(id, true);
+        const success = await Rentiwa.deleteListing(id, true);
         if (success && typeof callback === 'function') {
           callback();
         }
@@ -583,7 +583,7 @@ const Rentiwa = {
     }
   },
 
-  deleteListing(id, skipConfirm = false) {
+  async deleteListing(id, skipConfirm = false) {
     if (!skipConfirm) {
       this.confirmAndDeleteListing(id);
       return false;
@@ -593,29 +593,22 @@ const Rentiwa = {
     let products = this.getProducts();
     const product = products.find(p => p.id === id || String(p.id) === String(id));
 
-    if (product && user) {
-      const isOwner = (product.ownerName && product.ownerName === user.name) ||
-                      String(product.id).startsWith('p_');
-      if (!isOwner) {
-        this.showToast('Permission denied: You can only delete your own listings.', 'error');
-        return false;
-      }
+    if (!user || !user.uid || !product || product.ownerId !== user.uid) {
+      this.showToast('Permission denied: You can only delete your own listings.', 'error');
+      return false;
     }
 
-    const initialCount = products.length;
-    products = products.filter(p => p.id !== id && String(p.id) !== String(id));
+    try {
+      await deleteListingFromFirestore(id);
 
-    if (products.length < initialCount) {
-      localStorage.setItem(this.STORAGE_PRODUCTS_KEY, JSON.stringify(products));
+      this.firestoreListings = this.firestoreListings.filter(p => p.id !== id && String(p.id) !== String(id));
 
-      // Remove from favorites if saved
       let favs = this.getFavorites();
       if (favs.includes(id) || favs.includes(String(id))) {
         favs = favs.filter(fId => fId !== id && String(fId) !== String(id));
         localStorage.setItem(this.STORAGE_FAVS_KEY, JSON.stringify(favs));
       }
 
-      // Update user listingsCount
       if (user && user.listingsCount > 0) {
         user.listingsCount = user.listingsCount - 1;
         this.setUser(user);
@@ -623,9 +616,11 @@ const Rentiwa = {
 
       this.showToast('🗑️ Listing deleted successfully!', 'success');
       return true;
+    } catch (err) {
+      console.error("Error deleting listing from Firestore:", err);
+      this.showToast(err.message || 'Deletion failed.', 'error');
+      return false;
     }
-    this.showToast('Listing not found or deletion failed.', 'error');
-    return false;
   },
 
   // Dynamic Header & Footer Component Rendering

@@ -15,6 +15,7 @@ import {
   getDocs,
   doc,
   getDoc,
+  deleteDoc,
   query,
   where,
   orderBy
@@ -175,4 +176,26 @@ export const getListingByIdFromFirestore = async (id: string) => {
     console.error("Error getting listing by ID from Firestore:", err);
     return null;
   }
+};
+
+export const deleteListingFromFirestore = async (id: string) => {
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    throw new Error("Unauthorized: You must be logged in to delete a listing.");
+  }
+
+  const docRef = doc(db, "listings", id);
+  const docSnap = await getDoc(docRef);
+
+  if (!docSnap.exists()) {
+    throw new Error("Listing not found.");
+  }
+
+  const data = docSnap.data();
+  if (data.ownerId !== currentUser.uid) {
+    throw new Error("Unauthorized: You can only delete your own listings.");
+  }
+
+  await deleteDoc(docRef);
+  return true;
 };

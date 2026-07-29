@@ -186,19 +186,21 @@
       const contactBox = document.getElementById('contact-action-box');
       const user = Rentiwa.getUser();
 
-      const isOwner = user && (
-        user.name === product.ownerName || 
-        user.email === product.ownerEmail || 
-        product.id.startsWith('p_')
-      );
+      const isOwner = !!(user && user.uid && product.ownerId && product.ownerId === user.uid);
 
-      let deleteBtnHTML = `
-        <div style="margin-top:16px; padding-top:16px; border-top:1px dashed var(--border-light);">
-          <button onclick="deleteProductFromDetail('${product.id}')" class="btn btn-outline btn-full btn-sm" style="color:#ef4444; border-color:rgba(239, 68, 68, 0.4); background:#fff;">
-            🗑️ Delete This Listing
-          </button>
-        </div>
-      `;
+      let ownerActionsHTML = '';
+      if (isOwner) {
+        ownerActionsHTML = `
+          <div style="margin-top:16px; padding-top:16px; border-top:1px dashed var(--border-light); display:flex; flex-direction:column; gap:8px;">
+            <button onclick="Rentiwa.showToast('Edit feature coming soon!', 'info')" class="btn btn-outline btn-full btn-sm" style="color:var(--primary-dark); border-color:var(--primary); background:#fff;">
+              ✏️ Edit Listing
+            </button>
+            <button onclick="deleteProductFromDetail('${product.id}')" class="btn btn-outline btn-full btn-sm" style="color:#ef4444; border-color:rgba(239, 68, 68, 0.4); background:#fff;">
+              🗑️ Delete This Listing
+            </button>
+          </div>
+        `;
+      }
 
       if (!user) {
         contactBox.innerHTML = `
@@ -214,10 +216,9 @@
               Login to Contact Owner
             </button>
           </div>
-          ${deleteBtnHTML}
         `;
       } else {
-        const encodedMsg = encodeURIComponent(`Hi ${product.ownerName}, I saw your listing for "${product.title}" on Rentiwa and would like to rent it in Narela.`);
+        const encodedMsg = encodeURIComponent(`Hi ${product.ownerName || 'Owner'}, I saw your listing for "${product.title}" on Rentiwa and would like to rent it in Narela.`);
         const whatsappUrl = `https://wa.me/${product.ownerWhatsapp}?text=${encodedMsg}`;
 
         contactBox.innerHTML = `
@@ -244,7 +245,7 @@
               Call Owner Directly
             </a>
 
-            ${deleteBtnHTML}
+            ${ownerActionsHTML}
           </div>
         `;
       }
