@@ -235,10 +235,56 @@ const Rentiwa = {
       return null;
     } catch (err) {
       console.error("Google sign in error:", err);
-      const errMsg = err?.message || "Google Sign-In failed. Please try again.";
-      this.showToast(errMsg, 'error');
+      if (err?.code === 'auth/unauthorized-domain' || err?.message?.includes('auth/unauthorized-domain')) {
+        this.showUnauthorizedDomainModal(err.domain || window.location.hostname);
+      } else {
+        const errMsg = err?.message || "Google Sign-In failed. Please try again.";
+        this.showToast(errMsg, 'error');
+      }
       throw err;
     }
+  },
+
+  showUnauthorizedDomainModal(domain) {
+    const currentDomain = domain || window.location.hostname;
+    let modalEl = document.getElementById('unauthorized-domain-modal');
+    if (!modalEl) {
+      modalEl = document.createElement('div');
+      modalEl.id = 'unauthorized-domain-modal';
+      modalEl.className = 'modal-overlay active';
+      document.body.appendChild(modalEl);
+    }
+    modalEl.style.display = 'flex';
+    modalEl.innerHTML = `
+      <div class="modal-card" style="max-width:520px; width:90%; padding:24px; border-radius:12px; background:#fff; box-shadow:0 10px 25px rgba(0,0,0,0.15);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <h3 style="margin:0; font-size:1.25rem; color:#dc2626; display:flex; align-items:center; gap:8px;">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            Firebase Domain Authorization Required
+          </h3>
+          <button onclick="document.getElementById('unauthorized-domain-modal').style.display='none'" style="border:none; background:none; font-size:1.5rem; cursor:pointer; color:#6b7280;">&times;</button>
+        </div>
+        <p style="margin-bottom:12px; font-size:0.95rem; color:#374151; line-height:1.5;">
+          Firebase Authentication blocked the sign-in request because this web domain is not in your Firebase project's <strong>Authorized Domains</strong> list.
+        </p>
+        <div style="background:#f3f4f6; padding:12px; border-radius:8px; border:1px solid #e5e7eb; margin-bottom:16px;">
+          <div style="font-size:0.8rem; text-transform:uppercase; color:#6b7280; font-weight:700; margin-bottom:4px;">Current Domain:</div>
+          <div style="font-family:monospace; font-size:0.95rem; color:#111827; word-break:break-all; font-weight:600;">${currentDomain}</div>
+        </div>
+        <div style="font-size:0.9rem; color:#4b5563; margin-bottom:16px; line-height:1.6;">
+          <strong>How to fix this in Firebase Console:</strong>
+          <ol style="margin:8px 0 0 20px; padding:0;">
+            <li>Go to <a href="https://console.firebase.google.com/" target="_blank" style="color:#2563eb; text-decoration:underline;">Firebase Console</a> & select project <strong>rentiwa</strong></li>
+            <li>Go to <strong>Authentication</strong> &rarr; <strong>Settings</strong> &rarr; <strong>Authorized domains</strong></li>
+            <li>Click <strong>Add domain</strong> and paste: <code style="background:#e5e7eb; padding:2px 6px; border-radius:4px;">${currentDomain}</code></li>
+          </ol>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button onclick="navigator.clipboard.writeText('${currentDomain}'); Rentiwa.showToast('Domain copied to clipboard!', 'success');" class="btn btn-outline btn-sm">Copy Domain</button>
+          <button onclick="document.getElementById('unauthorized-domain-modal').style.display='none'" class="btn btn-primary btn-sm">Close</button>
+        </div>
+      </div>
+    `;
   },
 
   async logout() {

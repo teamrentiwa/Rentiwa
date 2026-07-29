@@ -37,6 +37,14 @@ export const signInWithGoogle = async (): Promise<User | null> => {
       console.log("Google sign-in popup was cancelled or closed by user.");
       return null;
     }
+    if (error?.code === 'auth/unauthorized-domain') {
+      const currentDomain = window.location.hostname;
+      console.warn(`Firebase Unauthorized Domain Error. Domain "${currentDomain}" is not authorized in Firebase Console.`);
+      const domainError = new Error(`Unauthorized Domain: ${currentDomain}. Please add "${currentDomain}" to Firebase Console -> Authentication -> Settings -> Authorized Domains.`);
+      (domainError as any).code = 'auth/unauthorized-domain';
+      (domainError as any).domain = currentDomain;
+      throw domainError;
+    }
     console.error("Firebase Google Auth Error:", error);
     throw error;
   }

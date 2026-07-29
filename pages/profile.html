@@ -78,27 +78,44 @@
 
   <script type="module" src="/js/app.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      let activeUser = Rentiwa.getUser();
+    function updateProfileInfo(activeUser) {
       if (!activeUser) {
-        activeUser = Rentiwa.defaultUser;
+        activeUser = Rentiwa.getUser() || Rentiwa.defaultUser;
       }
 
-      document.getElementById('profile-name').innerText = activeUser.name;
-      document.getElementById('profile-email').innerText = activeUser.email;
-      document.getElementById('profile-img').src = activeUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80';
+      const nameEl = document.getElementById('profile-name');
+      const emailEl = document.getElementById('profile-email');
+      const imgEl = document.getElementById('profile-img');
+
+      if (nameEl) nameEl.innerText = activeUser.name || 'User Name';
+      if (emailEl) emailEl.innerText = activeUser.email || 'No Email';
+      if (imgEl) imgEl.src = activeUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80';
 
       if (activeUser.plan === 'premium') {
-        document.getElementById('profile-plan-badge').innerText = '⭐ Premium Plan';
-        document.getElementById('profile-plan-badge').className = 'badge badge-amber';
-        document.getElementById('profile-listings-usage').innerText = 'Unlimited';
+        const badge = document.getElementById('profile-plan-badge');
+        if (badge) {
+          badge.innerText = '⭐ Premium Plan';
+          badge.className = 'badge badge-amber';
+        }
+        const usage = document.getElementById('profile-listings-usage');
+        if (usage) usage.innerText = 'Unlimited';
       } else {
         const count = activeUser.listingsCount || 0;
-        document.getElementById('profile-listings-usage').innerText = `${count}/5 used`;
+        const usage = document.getElementById('profile-listings-usage');
+        if (usage) usage.innerText = `${count}/5 used`;
       }
 
       renderMyListings(activeUser.name);
       renderMyFavorites();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      updateProfileInfo(Rentiwa.getUser());
+
+      window.onRentiwaAuthUpdate = (updatedUser) => {
+        updateProfileInfo(updatedUser);
+      };
+
       window.renderMyListings = renderMyListings;
       window.renderMyFavorites = renderMyFavorites;
     });
