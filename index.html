@@ -401,11 +401,28 @@
       line-height: 1.5;
     }
 
-    /* RESPONSIVE MEDIA QUERIES */
-    @media (max-width: 992px) {
+    /* RESPONSIVE MEDIA QUERIES FOR HERO & FEATURE CARDS */
+    /* Desktop (>1024px) */
+    @media (min-width: 1025px) {
+      .hero-grid-container {
+        grid-template-columns: 1fr 1fr;
+        gap: 48px;
+      }
+      .hero-left-col {
+        align-items: flex-start;
+        text-align: left;
+      }
+      .feature-cards-row {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+      }
+    }
+
+    /* Tablet (640px - 1024px) */
+    @media (min-width: 640px) and (max-width: 1024px) {
       .hero-grid-container {
         grid-template-columns: 1fr;
-        gap: 36px;
+        gap: 40px;
         margin-bottom: 40px;
       }
       .hero-left-col {
@@ -413,7 +430,7 @@
         text-align: center;
       }
       .hero-title {
-        font-size: 2.5rem;
+        font-size: 2.75rem;
       }
       .hero-supporting {
         max-width: 100%;
@@ -422,42 +439,124 @@
         justify-content: center;
       }
       .feature-cards-row {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
         gap: 16px;
       }
     }
 
-    @media (max-width: 640px) {
+    /* Mobile (<640px) */
+    @media (max-width: 639.98px) {
       .hero-landing-wrapper {
-        padding: 36px 0 30px;
+        padding: 28px 0 24px;
+      }
+      .hero-grid-container {
+        grid-template-columns: 1fr;
+        gap: 28px;
+        margin-bottom: 28px;
+      }
+      .hero-left-col {
+        align-items: center;
+        text-align: center;
+        width: 100%;
+      }
+      .hero-badge-pill {
+        margin-bottom: 14px;
+        padding: 6px 14px;
+        font-size: 0.82rem;
       }
       .hero-title {
-        font-size: 2rem;
+        font-size: 2.1rem;
+        line-height: 1.2;
+        margin-bottom: 12px;
       }
       .hero-subtitle {
         font-size: 1.05rem;
+        line-height: 1.4;
+        margin-bottom: 10px;
+      }
+      .hero-supporting {
+        font-size: 0.9rem;
+        line-height: 1.55;
+        margin-bottom: 22px;
+      }
+      .hero-cta-group {
+        flex-direction: column;
+        width: 100%;
+        gap: 10px;
+      }
+      .btn-hero-primary, .btn-hero-secondary {
+        width: 100%;
+        justify-content: center;
+        min-height: 48px;
+        font-size: 0.98rem;
       }
       .hero-right-col {
-        min-height: 360px;
+        min-height: 310px;
+        width: 100%;
+        overflow: hidden;
+        padding: 6px 0;
       }
       .hero-graphic-stage {
-        height: 360px;
+        height: 300px;
+        max-width: 100%;
       }
       .glass-central-card {
-        width: 170px;
-        padding: 16px 12px;
+        width: 145px;
+        padding: 14px 10px;
+        border-radius: 18px;
+        gap: 8px;
       }
       .stage-logo-img {
-        height: 36px;
+        height: 32px;
       }
-      .float-card-1 { top: 0px; left: -10px; }
-      .float-card-2 { top: 5px; right: -10px; }
-      .float-card-3 { top: 100px; left: -20px; }
-      .float-card-4 { top: 110px; right: -15px; }
-      .float-card-5 { bottom: 90px; left: -15px; }
-      .float-card-6 { bottom: 80px; right: -10px; }
-      .float-card-7 { bottom: 0px; left: 0px; }
-      .float-card-8 { bottom: -5px; right: 0px; }
+      .glass-badge {
+        font-size: 0.68rem;
+        padding: 3px 8px;
+      }
+      .floating-item-card {
+        padding: 5px 10px;
+        border-radius: 10px;
+        gap: 6px;
+      }
+      .item-icon-box {
+        width: 26px;
+        height: 26px;
+        font-size: 0.9rem;
+        border-radius: 6px;
+      }
+      .item-name { font-size: 0.72rem; }
+      .item-price { font-size: 0.65rem; }
+
+      .float-card-1 { top: 0px; left: 0px; }
+      .float-card-2 { top: 0px; right: 0px; }
+      .float-card-3 { top: 85px; left: 0px; }
+      .float-card-4 { top: 85px; right: 0px; }
+      .float-card-5 { bottom: 70px; left: 0px; }
+      .float-card-6 { bottom: 70px; right: 0px; }
+      .float-card-7 { bottom: 0px; left: 5px; }
+      .float-card-8 { bottom: 0px; right: 5px; }
+
+      .feature-cards-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      .feature-landing-card {
+        padding: 16px;
+        gap: 12px;
+        border-radius: 14px;
+      }
+      .feature-card-icon {
+        width: 42px;
+        height: 42px;
+        font-size: 1.3rem;
+        border-radius: 10px;
+      }
+      .feature-card-title {
+        font-size: 1rem;
+      }
+      .feature-card-desc {
+        font-size: 0.85rem;
+      }
     }
   </style>
 
