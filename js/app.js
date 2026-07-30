@@ -4,7 +4,7 @@
  * Phase 1 MVP - Narela (Delhi) Initial Launch
  */
 
-import { auth, signInWithGoogle, logoutGoogle, onAuthChange, saveListingToFirestore, fetchActiveListingsFromFirestore, getListingByIdFromFirestore, deleteListingFromFirestore, submitUpgradeRequestToFirestore, getUserProfileFromFirestore } from '/src/firebase.ts';
+import { auth, signInWithGoogle, logoutGoogle, onAuthChange, saveListingToFirestore, fetchActiveListingsFromFirestore, getListingByIdFromFirestore, deleteListingFromFirestore, submitUpgradeRequestToFirestore, getUserProfileFromFirestore, updateListingInFirestore, onListingsSnapshot } from '/src/firebase.ts';
 
 // Global State Manager
 const Rentiwa = {
@@ -80,9 +80,36 @@ const Rentiwa = {
   init() {
     this.ensureSeedData();
     this.setupAuthListener();
+    this.setupSnapshotListener();
     this.renderHeaderAndFooter();
     this.bindGlobalEvents();
     this.fetchListings();
+  },
+
+  setupSnapshotListener() {
+    try {
+      onListingsSnapshot((rawDocs) => {
+        this.firestoreListings = rawDocs.map(d => this.mapFirestoreDocToProduct(d));
+        this.listingsLoaded = true;
+        this.isListingsLoading = false;
+
+        if (typeof window.filterHomeProducts === 'function') {
+          window.filterHomeProducts();
+        }
+        if (typeof window.applyFilters === 'function') {
+          window.applyFilters();
+        }
+        if (typeof window.renderMyListings === 'function') {
+          const user = this.getUser();
+          window.renderMyListings(user ? user.name : '');
+        }
+        if (typeof window.loadListingDetails === 'function') {
+          window.loadListingDetails();
+        }
+      });
+    } catch (err) {
+      console.warn("Real-time listings snapshot listener error:", err);
+    }
   },
 
   setupAuthListener() {
@@ -186,16 +213,20 @@ const Rentiwa = {
       : ['https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80'];
     const loc = d.location || 'Narela, Delhi';
     const areaPart = loc.split(',')[0].trim() || 'Narela';
+    const priceVal = Number(d.price) || 0;
+    const priceHourVal = Number(d.priceHour) || priceVal;
+    const priceDayVal = Number(d.priceDay) || priceVal;
+    const pricingModeVal = d.pricingMode || d.pricingType || (d.priceHour && d.priceDay ? 'both' : (d.priceHour ? 'hour' : 'day'));
 
     return {
       id: d.id,
       title: d.title || 'Untitled Listing',
       description: d.description || '',
       category: d.category || 'Other',
-      price: Number(d.price) || 0,
-      priceDay: Number(d.price) || 0,
-      priceHour: Number(d.price) || 0,
-      pricingType: 'day',
+      price: priceVal,
+      priceDay: priceDayVal,
+      priceHour: priceHourVal,
+      pricingType: pricingModeVal,
       location: loc,
       area: areaPart,
       city: 'Delhi',
@@ -205,7 +236,7 @@ const Rentiwa = {
       ownerName: d.ownerName || 'Rentiwa User',
       ownerEmail: d.ownerEmail || '',
       ownerPhone: d.ownerPhone || '+91 98765 00112',
-      ownerWhatsapp: d.ownerWhatsapp || '+91 98765 00112',
+      ownerWhatsapp: d.ownerWhatsapp || d.ownerPhone || '+91 98765 00112',
       ownerAvatar: d.ownerAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
       status: d.status || 'active',
       createdAt: d.createdAt,
@@ -447,6 +478,28 @@ const Rentiwa = {
     });
   },
 
+  formatPostedTime(createdAt) {
+    if (!createdAt) return 'Recently';
+    let timestamp = createdAt;
+    if (typeof createdAt === 'object' && createdAt.toMillis) {
+      timestamp = createdAt.toMillis();
+    } else if (typeof createdAt === 'string') {
+      timestamp = new Date(createdAt).getTime();
+    }
+    if (!timestamp || isNaN(timestamp)) return 'Recently';
+
+    const diffMs = Date.now() - timestamp;
+    if (diffMs < 0) return 'Just now';
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 5) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 30) return `${diffDays}d ago`;
+    return `${Math.floor(diffDays / 30)}mo ago`;
+  },
+
   renderProductCardHTML(p, options = {}) {
     const favs = this.getFavorites();
     const isFav = favs.includes(p.id) || favs.includes(String(p.id));
@@ -458,13 +511,19 @@ const Rentiwa = {
 
     const images = p.images && p.images.length > 0 ? p.images : ['https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80'];
     const hasMultipleImages = images.length > 1;
+    const postedTimeStr = this.formatPostedTime(p.createdAt);
+    const ownerDisplayName = p.ownerName || 'Verified Owner';
+
+    const pricingBadgeText = p.pricingType === 'hour' 
+      ? 'Per Hour' 
+      : (p.pricingType === 'day' ? 'Per Day' : (p.priceHour && p.priceDay ? 'Hour & Day' : 'Per Day'));
 
     return `
-      <div class="product-card">
-        <div class="product-image-container">
+      <div class="product-card" onclick="window.location.href='/pages/listing.html?id=${p.id}'">
+        <div class="product-image-container" onclick="event.stopPropagation(); window.location.href='/pages/listing.html?id=${p.id}'">
           <img id="card-img-${p.id}" data-img-idx="0" src="${images[0]}" class="product-image" alt="${p.title}" loading="lazy">
           
-          <button class="fav-btn ${isFav ? 'active' : ''}" onclick="event.stopPropagation(); Rentiwa.toggleFavorite('${p.id}'); ${onFavToggle}">
+          <button class="fav-btn ${isFav ? 'active' : ''}" onclick="event.stopPropagation(); Rentiwa.toggleFavorite('${p.id}'); ${onFavToggle}" title="Save to Favorites">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="${isFav ? '#ef4444' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
           </button>
 
@@ -510,8 +569,11 @@ const Rentiwa = {
 
         <div class="product-body">
           <div class="product-category-area">
-            <span class="badge badge-primary">${p.category}</span>
-            <span>📍 ${(p.area || p.location || 'Narela').split(',')[0]}</span>
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              <span class="badge badge-primary">${p.category}</span>
+              <span class="price-type-badge">${pricingBadgeText}</span>
+            </div>
+            <span class="product-location-text">📍 ${(p.area || p.location || 'Narela').split(',')[0]}</span>
           </div>
 
           <h3 class="product-title">${p.title}</h3>
@@ -520,24 +582,33 @@ const Rentiwa = {
             ${priceHTML}
           </div>
 
+          <div class="product-owner-meta">
+            <span class="meta-owner" title="Owner: ${ownerDisplayName}">👤 ${ownerDisplayName}</span>
+            <span class="meta-time">⏱️ ${postedTimeStr}</span>
+          </div>
+
           <div class="product-footer">
             <div class="owner-rating">
               <svg width="14" height="14" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
               <span>${p.rating || 5.0} (${p.reviewCount || 1})</span>
             </div>
 
-            <div style="display:flex; gap:6px; align-items:center;">
+            <div class="product-card-actions" onclick="event.stopPropagation();">
+              <button type="button" onclick="Rentiwa.shareListing('${p.id}', event);" class="btn btn-outline btn-sm card-share-btn" title="Share Listing">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                <span class="share-btn-label">Share</span>
+              </button>
               ${isMyItem ? `
-                <button type="button" onclick="event.stopPropagation(); Rentiwa.showToast('Edit feature coming soon!', 'info');" class="btn btn-outline btn-sm" style="color:var(--primary-dark); border-color:var(--primary); padding:5px 8px;" title="Edit Listing">
+                <button type="button" onclick="Rentiwa.openEditListingModal('${p.id}');" class="btn btn-outline btn-sm" style="color:var(--primary-dark); border-color:var(--primary); padding:5px 8px;" title="Edit Listing">
                   ✏️
                 </button>
                 ${onDeleteCallbackName ? `
-                  <button type="button" onclick="event.stopPropagation(); Rentiwa.confirmAndDeleteListing('${p.id}', ${onDeleteCallbackName});" class="btn btn-outline btn-sm" style="color:#ef4444; border-color:rgba(239, 68, 68, 0.3); padding:5px 8px;" title="Delete Listing">
+                  <button type="button" onclick="Rentiwa.confirmAndDeleteListing('${p.id}', ${onDeleteCallbackName});" class="btn btn-outline btn-sm" style="color:#ef4444; border-color:rgba(239, 68, 68, 0.3); padding:5px 8px;" title="Delete Listing">
                     🗑️
                   </button>
                 ` : ''}
               ` : ''}
-              <a href="/pages/listing.html?id=${p.id}" class="btn btn-secondary btn-sm" style="padding:6px 14px;">
+              <a href="/pages/listing.html?id=${p.id}" class="btn btn-secondary btn-sm card-details-btn">
                 View Details
               </a>
             </div>
@@ -545,6 +616,222 @@ const Rentiwa = {
         </div>
       </div>
     `;
+  },
+
+  openEditListingModal(productId) {
+    const product = this.getProductById(productId);
+    if (!product) {
+      this.showToast('Listing not found', 'error');
+      return;
+    }
+
+    let modal = document.getElementById('edit-listing-modal-overlay');
+    if (modal) modal.remove();
+
+    modal = document.createElement('div');
+    modal.id = 'edit-listing-modal-overlay';
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal-card" style="max-width:540px; width:92%; max-height:90vh; overflow-y:auto; padding:28px 22px;">
+        <button class="modal-close" onclick="Rentiwa.closeModal('edit-listing-modal-overlay')">✕</button>
+        <div style="text-align:center; margin-bottom:20px;">
+          <h2 class="heading-md" style="margin-bottom:4px; font-size:1.3rem;">Edit Listing Details</h2>
+          <p style="font-size:0.85rem; color:var(--text-muted); margin:0;">Update details for <strong>${product.title}</strong></p>
+        </div>
+
+        <form onsubmit="Rentiwa.handleEditFormSubmit(event, '${product.id}')">
+          <div style="display:flex; flex-direction:column; gap:14px;">
+            <div>
+              <label class="form-label" style="font-weight:600; font-size:0.88rem;">Item Name / Title *</label>
+              <input type="text" id="edit-title" class="form-input" value="${product.title.replace(/"/g, '&quot;')}" required>
+            </div>
+
+            <div>
+              <label class="form-label" style="font-weight:600; font-size:0.88rem;">Category *</label>
+              <select id="edit-category" class="form-select" required>
+                <option value="Photography" ${product.category === 'Photography' ? 'selected' : ''}>📷 Photography & Cameras</option>
+                <option value="Events" ${product.category === 'Events' ? 'selected' : ''}>🔊 Speakers & Party Decor</option>
+                <option value="Gaming" ${product.category === 'Gaming' ? 'selected' : ''}>🎮 Gaming Consoles (PS5/Xbox)</option>
+                <option value="Electronics" ${product.category === 'Electronics' ? 'selected' : ''}>💻 Electronics & Laptops</option>
+                <option value="Tools" ${product.category === 'Tools' ? 'selected' : ''}>🔧 Power Tools & Drills</option>
+                <option value="Sports" ${product.category === 'Sports' ? 'selected' : ''}>⛺ Camping & Sports</option>
+                <option value="Vehicles" ${product.category === 'Vehicles' ? 'selected' : ''}>🚲 Bicycles & Cycles</option>
+                <option value="Music" ${product.category === 'Music' ? 'selected' : ''}>🎤 Music & Audio</option>
+                <option value="Furniture" ${product.category === 'Furniture' ? 'selected' : ''}>🪑 Furniture & Stage</option>
+                <option value="Other" ${product.category === 'Other' ? 'selected' : ''}>📦 Other Items</option>
+              </select>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+              <div>
+                <label class="form-label" style="font-weight:600; font-size:0.88rem;">Price per Hour (₹)</label>
+                <input type="number" id="edit-price-hour" class="form-input" value="${product.priceHour || product.price}" min="1">
+              </div>
+              <div>
+                <label class="form-label" style="font-weight:600; font-size:0.88rem;">Price per Day (₹)</label>
+                <input type="number" id="edit-price-day" class="form-input" value="${product.priceDay || product.price}" min="1">
+              </div>
+            </div>
+
+            <div>
+              <label class="form-label" style="font-weight:600; font-size:0.88rem;">Location / Area *</label>
+              <input type="text" id="edit-location" class="form-input" value="${product.location.replace(/"/g, '&quot;')}" required>
+            </div>
+
+            <div>
+              <label class="form-label" style="font-weight:600; font-size:0.88rem;">Description *</label>
+              <textarea id="edit-description" class="form-textarea" style="min-height:85px;" required>${product.description}</textarea>
+            </div>
+
+            <div style="display:flex; gap:12px; margin-top:8px;">
+              <button type="button" onclick="Rentiwa.closeModal('edit-listing-modal-overlay')" class="btn btn-outline btn-full">
+                Cancel
+              </button>
+              <button type="submit" id="edit-submit-btn" class="btn btn-primary btn-full" style="font-weight:700;">
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    setTimeout(() => modal.classList.add('active'), 10);
+  },
+
+  async handleEditFormSubmit(e, productId) {
+    e.preventDefault();
+    const submitBtn = document.getElementById('edit-submit-btn');
+
+    const title = document.getElementById('edit-title').value.trim();
+    const category = document.getElementById('edit-category').value;
+    const priceHour = Number(document.getElementById('edit-price-hour').value) || 0;
+    const priceDay = Number(document.getElementById('edit-price-day').value) || 0;
+    const location = document.getElementById('edit-location').value.trim();
+    const description = document.getElementById('edit-description').value.trim();
+
+    if (!title || !category || !location || !description) {
+      this.showToast('Please fill out all required fields.', 'error');
+      return;
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerText = 'Updating...';
+    }
+
+    try {
+      await updateListingInFirestore(productId, {
+        title,
+        category,
+        price: priceDay || priceHour,
+        priceHour,
+        priceDay,
+        location,
+        description
+      });
+
+      this.showToast('✨ Listing updated successfully!', 'success');
+      this.closeModal('edit-listing-modal-overlay');
+      await this.fetchListings();
+    } catch (err) {
+      console.error("Error updating listing:", err);
+      this.showToast(err.message || 'Failed to update listing.', 'error');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerText = 'Save Changes';
+      }
+    }
+  },
+
+  shareListing(productId, event) {
+    if (event) event.stopPropagation();
+
+    const product = this.getProductById(productId);
+    const shareUrl = `${window.location.origin}/pages/listing.html?id=${productId}`;
+    const title = product ? product.title : 'Rental Item on Rentiwa';
+    const area = product ? (product.area || product.location || 'Narela') : 'Narela';
+    const shareText = product 
+      ? `Check out "${product.title}" on Rentiwa! Rent it in ${area}: ${shareUrl}`
+      : `Check out this rental listing on Rentiwa: ${shareUrl}`;
+
+    const waText = encodeURIComponent(`${shareText}`);
+    const waUrl = `https://api.whatsapp.com/send?text=${waText}`;
+
+    let modal = document.getElementById('share-modal-overlay');
+    if (modal) modal.remove();
+
+    modal = document.createElement('div');
+    modal.id = 'share-modal-overlay';
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal-card" style="max-width:440px; width:92%; text-align:center; padding:24px 20px;">
+        <button class="modal-close" onclick="Rentiwa.closeModal('share-modal-overlay')">✕</button>
+        
+        <div style="font-size:2rem; margin-bottom:8px;">📢</div>
+        <h3 class="heading-md" style="margin-bottom:6px; font-size:1.25rem;">Share Listing</h3>
+        <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom:18px; line-height:1.4;">
+          Share <strong>"${title}"</strong> with friends & local renters in ${area}!
+        </p>
+
+        <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:16px;">
+          <a href="${waUrl}" target="_blank" rel="noopener noreferrer" class="btn" style="background:#25D366; color:#ffffff; font-weight:700; padding:12px 16px; border-radius:var(--radius-lg); display:flex; align-items:center; justify-content:center; gap:8px; text-decoration:none; box-shadow:0 3px 10px rgba(37,211,102,0.25);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12.012 2c-5.506 0-9.989 4.478-9.99 9.984a9.964 9.964 0 001.333 4.993L2 22l5.233-1.237a9.96 9.96 0 004.779 1.217h.004c5.505 0 9.988-4.478 9.989-9.985 0-2.669-1.038-5.176-2.925-7.062A9.925 9.925 0 0012.012 2z"/></svg>
+            <span>Share via WhatsApp</span>
+          </a>
+
+          <button type="button" onclick="Rentiwa.copyShareLink('${shareUrl}')" class="btn btn-outline" style="font-weight:700; padding:12px 16px; border-radius:var(--radius-lg); display:flex; align-items:center; justify-content:center; gap:8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <span>Copy Direct Link</span>
+          </button>
+        </div>
+
+        <div style="background:var(--bg-secondary); padding:8px 12px; border-radius:var(--radius-md); font-size:0.78rem; color:var(--text-muted); word-break:break-all; border:1px solid var(--border-light);">
+          ${shareUrl}
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    setTimeout(() => modal.classList.add('active'), 10);
+  },
+
+  copyShareLink(url) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(() => {
+        this.showToast('📋 Link copied to clipboard!', 'success');
+      }).catch(() => {
+        this.fallbackCopyText(url);
+      });
+    } else {
+      this.fallbackCopyText(url);
+    }
+  },
+
+  fallbackCopyText(text) {
+    const input = document.createElement('input');
+    input.value = text;
+    document.body.appendChild(input);
+    input.select();
+    document.execCommand('copy');
+    document.body.removeChild(input);
+    this.showToast('📋 Link copied to clipboard!', 'success');
+  },
+
+  async triggerNativeShare(title, text, url) {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: title,
+          text: text,
+          url: url
+        });
+        this.closeModal('share-modal-overlay');
+      } catch (err) {
+        console.warn("Share error:", err);
+      }
+    }
   },
 
   confirmAndDeleteListing(id, callback) {
@@ -651,17 +938,18 @@ const Rentiwa = {
                 <img src="/assets/logo.png" onerror="this.onerror=null; this.src='https://i.ibb.co/ZRpnbdjd/Rentiwa-logo.png';" alt="Rentiwa Logo" class="brand-logo-img">
               </div>
               <span class="brand-name">Rentiwa</span>
-              <div class="city-pill">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                </svg>
-                Narela (Delhi)
-              </div>
             </a>
 
             <ul class="nav-menu" id="nav-menu-list">
               <li><a href="/" class="nav-link ${window.location.pathname === '/' || window.location.pathname.endsWith('index.html') ? 'active' : ''}">Home</a></li>
               <li><a href="/pages/all-listings.html" class="nav-link ${window.location.pathname.includes('all-listings') ? 'active' : ''}">All Listings</a></li>
+              <li class="mobile-only-nav-item"><a href="/pages/add-listing.html" class="nav-link">+ List Item</a></li>
+              ${currentUser ? `
+                <li class="mobile-only-nav-item"><a href="/pages/profile.html" class="nav-link">My Profile & Listings</a></li>
+                <li class="mobile-only-nav-item"><button type="button" onclick="Rentiwa.logout()" class="nav-link" style="color:#ef4444; background:none; border:none; width:100%; text-align:left; font:inherit; cursor:pointer;">Logout (${currentUser.name.split(' ')[0]})</button></li>
+              ` : `
+                <li class="mobile-only-nav-item"><button type="button" onclick="Rentiwa.loginWithGoogle()" class="nav-link" style="color:var(--primary-dark); background:none; border:none; width:100%; text-align:left; font:inherit; cursor:pointer; font-weight:700;">🔑 Login with Google</button></li>
+              `}
             </ul>
 
             <div class="nav-actions">

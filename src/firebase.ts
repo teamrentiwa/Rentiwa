@@ -12,6 +12,7 @@ import {
   collection, 
   addDoc, 
   setDoc,
+  updateDoc,
   serverTimestamp,
   getDocs,
   doc,
@@ -19,7 +20,8 @@ import {
   deleteDoc,
   query,
   where,
-  orderBy
+  orderBy,
+  onSnapshot
 } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -45,6 +47,11 @@ export interface SaveListingParams {
   price: number;
   location: string;
   images?: string[];
+  pricingMode?: string;
+  priceHour?: number;
+  priceDay?: number;
+  ownerPhone?: string;
+  ownerWhatsapp?: string;
 }
 
 export const saveListingToFirestore = async (params: SaveListingParams) => {
@@ -59,6 +66,11 @@ export const saveListingToFirestore = async (params: SaveListingParams) => {
   const location = (params.location || "").trim();
   const price = Number(params.price);
   const images = Array.isArray(params.images) ? params.images : [];
+  const pricingMode = params.pricingMode || 'day';
+  const priceHour = Number(params.priceHour) || price;
+  const priceDay = Number(params.priceDay) || price;
+  const ownerPhone = params.ownerPhone || currentUser.phoneNumber || '+91 98765 00112';
+  const ownerWhatsapp = params.ownerWhatsapp || ownerPhone;
 
   if (!title) throw new Error("Title is required.");
   if (!description) throw new Error("Description is required.");
@@ -71,17 +83,83 @@ export const saveListingToFirestore = async (params: SaveListingParams) => {
     description,
     category,
     price,
+    priceHour,
+    priceDay,
+    pricingMode,
     location,
     images,
     ownerId: currentUser.uid,
-    ownerName: currentUser.displayName || '',
+    ownerName: currentUser.displayName || 'Rentiwa User',
     ownerEmail: currentUser.email || '',
+    ownerPhone,
+    ownerWhatsapp,
     createdAt: serverTimestamp(),
     status: 'active'
   };
 
   const docRef = await addDoc(collection(db, "listings"), listingDoc);
   return { id: docRef.id, ...listingDoc };
+};
+
+export const updateListingInFirestore = async (id: string, params: Partial<SaveListingParams>) => {
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    throw new Error("Unauthorized: You must be logged in to edit a listing.");
+  }
+
+  const docRef = doc(db, "listings", id);
+  const docSnap = await getDoc(docRef);
+
+  if (!docSnap.exists()) {
+    throw new Error("Listing not found.");
+  }
+
+  const existingData = docSnap.data();
+  if (existingData.ownerId !== currentUser.uid) {
+    throw new Error("Unauthorized: You can only edit your own listings.");
+  }
+
+  const updateData: Record<string, any> = {
+    lastUpdated: serverTimestamp()
+  };
+
+  if (params.title !== undefined) updateData.title = params.title.trim();
+  if (params.description !== undefined) updateData.description = params.description.trim();
+  if (params.category !== undefined) updateData.category = params.category.trim();
+  if (params.location !== undefined) updateData.location = params.location.trim();
+  if (params.price !== undefined) updateData.price = Number(params.price);
+  if (params.priceHour !== undefined) updateData.priceHour = Number(params.priceHour);
+  if (params.priceDay !== undefined) updateData.priceDay = Number(params.priceDay);
+  if (params.pricingMode !== undefined) updateData.pricingMode = params.pricingMode;
+  if (params.images !== undefined) updateData.images = params.images;
+
+  await updateDoc(docRef, updateData);
+  return { id, ...existingData, ...updateData };
+};
+
+export const onListingsSnapshot = (callback: (listings: any[]) => void) => {
+  const listingsRef = collection(db, "listings");
+  const q = query(listingsRef, where("status", "==", "active"));
+  
+  return onSnapshot(q, (snapshot) => {
+    const docs = snapshot.docs.map(docSnap => {
+      const data = docSnap.data();
+      return {
+        id: docSnap.id,
+        ...data,
+        createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : (data.createdAt || Date.now())
+      };
+    });
+    // Sort descending by createdAt
+    docs.sort((a, b) => {
+      const timeA = typeof a.createdAt === 'number' ? a.createdAt : 0;
+      const timeB = typeof b.createdAt === 'number' ? b.createdAt : 0;
+      return timeB - timeA;
+    });
+    callback(docs);
+  }, (err) => {
+    console.warn("Real-time listings snapshot error:", err);
+  });
 };
 
 export const signInWithGoogle = async (): Promise<User | null> => {
