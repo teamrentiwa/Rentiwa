@@ -4,7 +4,7 @@
  * Phase 1 MVP - Narela (Delhi) Initial Launch
  */
 
-import { auth, signInWithGoogle, logoutGoogle, onAuthChange, saveListingToFirestore, fetchActiveListingsFromFirestore, getListingByIdFromFirestore, deleteListingFromFirestore } from '/src/firebase.ts';
+import { auth, signInWithGoogle, logoutGoogle, onAuthChange, saveListingToFirestore, fetchActiveListingsFromFirestore, getListingByIdFromFirestore, deleteListingFromFirestore, submitUpgradeRequestToFirestore, getUserProfileFromFirestore } from '/src/firebase.ts';
 
 // Global State Manager
 const Rentiwa = {
@@ -97,9 +97,29 @@ const Rentiwa = {
           city: 'Narela, Delhi',
           area: 'Narela Sector A6',
           plan: 'free',
+          extraFreeListings: 0,
           listingsCount: 0,
           avatar: fbUser.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
         };
+
+        // Fetch user profile from Firestore to restore bonus listings & details
+        getUserProfileFromFirestore(fbUser.uid).then((prof) => {
+          if (prof) {
+            if (prof.extraFreeListings) {
+              this.currentAuthUser.extraFreeListings = prof.extraFreeListings;
+            }
+            if (prof.phone) {
+              this.currentAuthUser.phone = prof.phone;
+            }
+            if (prof.name) {
+              this.currentAuthUser.name = prof.name;
+            }
+            this.updateUserNavUI();
+            if (typeof window.onRentiwaAuthUpdate === 'function') {
+              window.onRentiwaAuthUpdate(this.currentAuthUser);
+            }
+          }
+        }).catch(err => console.warn("User profile fetch err:", err));
       } else {
         this.currentAuthUser = null;
       }
@@ -338,18 +358,10 @@ const Rentiwa = {
     this.showToast(`Welcome back, ${this.defaultUser.name}!`, 'success');
   },
 
-  // Free Listing Limit Rule (Max 5 FREE listings)
   checkCanListProduct() {
     const user = this.getUser();
     if (!user) {
       this.openLoginModal();
-      return false;
-    }
-    if (user.plan === 'premium') return true;
-
-    const myProducts = this.getProducts().filter(p => p.ownerName === user.name);
-    if (myProducts.length >= 5 || (user.listingsCount && user.listingsCount >= 5)) {
-      this.openPremiumUpgradeModal();
       return false;
     }
     return true;
@@ -650,8 +662,6 @@ const Rentiwa = {
             <ul class="nav-menu" id="nav-menu-list">
               <li><a href="/" class="nav-link ${window.location.pathname === '/' || window.location.pathname.endsWith('index.html') ? 'active' : ''}">Home</a></li>
               <li><a href="/pages/all-listings.html" class="nav-link ${window.location.pathname.includes('all-listings') ? 'active' : ''}">All Listings</a></li>
-              <li><a href="/#browse" class="nav-link">Browse</a></li>
-              <li><a href="/pages/pricing.html" class="nav-link ${window.location.pathname.includes('pricing') ? 'active' : ''}">Pricing</a></li>
             </ul>
 
             <div class="nav-actions">
@@ -671,13 +681,12 @@ const Rentiwa = {
                       <div class="dropdown-header">
                         <div class="dropdown-name">${currentUser.name}</div>
                         <div class="dropdown-email">${currentUser.email}</div>
-                        <span class="badge ${currentUser.plan === 'premium' ? 'badge-amber' : 'badge-green'}" style="margin-top:6px;">
-                          ${currentUser.plan === 'premium' ? '⭐ Premium Plan' : `Free (${currentUser.listingsCount || 2}/5 used)`}
+                        <span class="badge badge-green" style="margin-top:6px;">
+                          Verified Member
                         </span>
                       </div>
                       <a href="/pages/profile.html" class="dropdown-item">My Profile</a>
                       <a href="/pages/add-listing.html" class="dropdown-item">Add Listing</a>
-                      <a href="/pages/pricing.html" class="dropdown-item">Upgrade Plan (₹21)</a>
                       <div class="dropdown-divider"></div>
                       <button onclick="Rentiwa.logout()" class="dropdown-item" style="color:#ef4444; width:100%;">Logout</button>
                     </div>
@@ -719,20 +728,18 @@ const Rentiwa = {
                 <div class="footer-title">Marketplace</div>
                 <ul class="footer-links">
                   <li><a href="/pages/all-listings.html">All Listings Feed</a></li>
-                  <li><a href="/#browse">Browse Categories</a></li>
                   <li><a href="/pages/add-listing.html">List Your Product</a></li>
-                  <li><a href="/pages/pricing.html">Pricing Plan (₹21)</a></li>
                 </ul>
               </div>
 
               <div>
                 <div class="footer-title">Top Categories</div>
                 <ul class="footer-links">
-                  <li><a href="/#browse">Photography & Cameras</a></li>
-                  <li><a href="/#browse">Speakers & Party Decor</a></li>
-                  <li><a href="/#browse">Gaming Consoles (PS5/Xbox)</a></li>
-                  <li><a href="/#browse">Power Tools & Drills</a></li>
-                  <li><a href="/#browse">Camping & Bicycles</a></li>
+                  <li><a href="/pages/all-listings.html?category=Photography">Photography & Cameras</a></li>
+                  <li><a href="/pages/all-listings.html?category=Events">Speakers & Party Decor</a></li>
+                  <li><a href="/pages/all-listings.html?category=Gaming">Gaming Consoles (PS5/Xbox)</a></li>
+                  <li><a href="/pages/all-listings.html?category=Tools">Power Tools & Drills</a></li>
+                  <li><a href="/pages/all-listings.html?category=Sports">Camping & Bicycles</a></li>
                 </ul>
               </div>
 
@@ -783,60 +790,204 @@ const Rentiwa = {
   },
 
   // Modal Renderers
-  openPremiumUpgradeModal() {
-    let overlay = document.getElementById('premium-modal-overlay');
-    if (!overlay) {
-      overlay = document.createElement('div');
-      overlay.id = 'premium-modal-overlay';
-      overlay.className = 'modal-overlay';
-      overlay.innerHTML = `
-        <div class="modal-card" style="text-align:center;">
-          <button class="modal-close" onclick="Rentiwa.closeModal('premium-modal-overlay')">✕</button>
-          <div class="premium-popup-badge">🚀 RENTIWA PREMIUM</div>
-          <h2 class="heading-md" style="margin-bottom:8px;">Free Listing Limit Reached</h2>
-          <p class="subheading" style="font-size:0.95rem; margin-bottom:20px;">
-            You have used your 5 FREE product listings. Upgrade to Unlimited for lifetime income!
-          </p>
+  openUpgradeModal() {
+    const user = this.getUser();
+    if (!user) {
+      this.showToast('Please log in to submit an upgrade request.', 'info');
+      this.openLoginModal();
+      return;
+    }
 
-          <div style="background:var(--primary-light); padding:20px; border-radius:var(--radius-lg); margin-bottom:24px; border:1px solid rgba(16,185,129,0.3);">
-            <div class="premium-price-tag" style="justify-content:center;">
-              ₹21 <span>/ Lifetime Access</span>
+    let overlay = document.getElementById('upgrade-request-modal-overlay');
+    if (overlay) {
+      overlay.remove();
+    }
+
+    overlay = document.createElement('div');
+    overlay.id = 'upgrade-request-modal-overlay';
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal-card" style="max-width:520px; width:92%; max-height:92vh; overflow-y:auto; padding:28px 22px;">
+        <button class="modal-close" onclick="Rentiwa.closeModal('upgrade-request-modal-overlay')">✕</button>
+        <div id="upgrade-form-container">
+          <div style="text-align:center; margin-bottom:20px;">
+            <div class="badge badge-amber" style="margin-bottom:8px; display:inline-flex; align-items:center; gap:6px; font-weight:700;">
+              ⭐ RENTIWA UPGRADE WAITING LIST
             </div>
-            <p style="font-size:0.82rem; color:var(--primary-dark); font-weight:600; margin-top:4px;">
-              Special Launch Offer for Narela Residents
+            <h2 class="heading-md" style="margin-bottom:6px; font-size:1.35rem;">Upgrade Request Form</h2>
+            <p style="font-size:0.88rem; color:var(--text-muted); margin:0;">
+              Join our Upgrade Waiting List & unlock <strong>+5 FREE Listings</strong> instantly!
             </p>
           </div>
 
-          <ul class="premium-feature-list" style="text-align:left; margin-bottom:24px;">
-            <li class="premium-feature-item">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-              <strong>Unlimited Product Listings</strong>
-            </li>
-            <li class="premium-feature-item">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-              <strong>Golden Premium Badge</strong> on your profile
-            </li>
-            <li class="premium-feature-item">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-              <strong>Priority Top Listing</strong> in Narela search results
-            </li>
-            <li class="premium-feature-item">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-              <strong>Direct WhatsApp Contact Button</strong> for faster deals
-            </li>
-          </ul>
+          <form id="upgrade-request-form" onsubmit="Rentiwa.handleUpgradeRequestSubmit(event)">
+            <div style="display:flex; flex-direction:column; gap:14px;">
+              <div>
+                <label class="form-label" style="font-weight:600; font-size:0.88rem;">Full Name *</label>
+                <input type="text" id="upgrade-name" class="form-input" value="${user.name || ''}" placeholder="Enter your full name" required>
+              </div>
 
-          <button onclick="Rentiwa.simulatePaymentUpgrade()" class="btn btn-primary btn-full btn-lg">
-            Upgrade Now for ₹21
-          </button>
-          <div style="font-size:0.75rem; color:var(--text-light); margin-top:10px;">
-            🔒 Safe & Secure. Instant Activation.
-          </div>
+              <div>
+                <label class="form-label" style="font-weight:600; font-size:0.88rem;">Phone Number *</label>
+                <input type="tel" id="upgrade-phone" class="form-input" value="${user.phone || ''}" placeholder="+91 98765 43210" required>
+              </div>
+
+              <div>
+                <label class="form-label" style="font-weight:600; font-size:0.88rem;">Location / Area *</label>
+                <input type="text" id="upgrade-location" class="form-input" value="${user.area || 'Narela, Delhi'}" placeholder="e.g. Narela Sector A6, Delhi" required>
+              </div>
+
+              <div>
+                <label class="form-label" style="font-weight:600; font-size:0.88rem;">Current Occupation (Optional)</label>
+                <input type="text" id="upgrade-occupation" class="form-input" placeholder="e.g. Student, Photographer, Business Owner">
+              </div>
+
+              <div>
+                <label class="form-label" style="font-weight:600; font-size:0.88rem; margin-bottom:8px; display:block;">
+                  Has Rentiwa been helpful for you? *
+                </label>
+                <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;">
+                  <label class="upgrade-radio-card">
+                    <input type="radio" name="helpfulAnswer" value="Yes" checked style="display:none;">
+                    <div class="upgrade-radio-content">
+                      <span class="radio-icon">😊</span>
+                      <span>Yes</span>
+                    </div>
+                  </label>
+
+                  <label class="upgrade-radio-card">
+                    <input type="radio" name="helpfulAnswer" value="Somewhat" style="display:none;">
+                    <div class="upgrade-radio-content">
+                      <span class="radio-icon">🤔</span>
+                      <span>Somewhat</span>
+                    </div>
+                  </label>
+
+                  <label class="upgrade-radio-card">
+                    <input type="radio" name="helpfulAnswer" value="No" style="display:none;">
+                    <div class="upgrade-radio-content">
+                      <span class="radio-icon">🙁</span>
+                      <span>No</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label class="form-label" style="font-weight:600; font-size:0.88rem;">What do you want from Rentiwa?</label>
+                <textarea id="upgrade-feedback" class="form-textarea" style="min-height:75px;" placeholder="Tell us what items or features you'd like to see... (Optional)"></textarea>
+              </div>
+
+              <button type="submit" id="upgrade-submit-btn" class="btn btn-primary btn-full btn-lg" style="margin-top:6px; font-weight:700;">
+                Submit Upgrade Request
+              </button>
+            </div>
+          </form>
         </div>
-      `;
-      document.body.appendChild(overlay);
-    }
+      </div>
+    `;
+    document.body.appendChild(overlay);
     setTimeout(() => overlay.classList.add('active'), 10);
+  },
+
+  openPremiumUpgradeModal() {
+    this.openUpgradeModal();
+  },
+
+  async handleUpgradeRequestSubmit(e) {
+    e.preventDefault();
+    const user = this.getUser();
+    if (!user) {
+      this.openLoginModal();
+      return;
+    }
+
+    const name = (document.getElementById('upgrade-name').value || '').trim();
+    const phone = (document.getElementById('upgrade-phone').value || '').trim();
+    const location = (document.getElementById('upgrade-location').value || '').trim();
+    const occupation = (document.getElementById('upgrade-occupation').value || '').trim();
+    const helpfulAnswer = document.querySelector('input[name="helpfulAnswer"]:checked')?.value || 'Yes';
+    const feedback = (document.getElementById('upgrade-feedback').value || '').trim();
+
+    if (!name || !phone || !location) {
+      this.showToast('Please fill out all required fields.', 'error');
+      return;
+    }
+
+    const btn = document.getElementById('upgrade-submit-btn');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = `<span>Submitting Request...</span>`;
+    }
+
+    try {
+      await submitUpgradeRequestToFirestore({
+        name,
+        phone,
+        location,
+        occupation,
+        helpfulAnswer,
+        feedback
+      });
+
+      // Grant +5 free listings locally
+      user.extraFreeListings = 5;
+      user.hasUpgradeRequest = true;
+      user.name = name;
+      user.phone = phone;
+      this.setUser(user);
+
+      const container = document.getElementById('upgrade-form-container');
+      if (container) {
+        container.innerHTML = `
+          <div style="text-align:center; padding:12px 4px;">
+            <div style="width:64px; height:64px; background:#dcfce7; color:#16a34a; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:1.8rem; font-weight:bold; box-shadow:0 4px 12px rgba(22,163,74,0.2);">
+              ✓
+            </div>
+
+            <h2 style="font-family:var(--font-heading); font-size:1.5rem; font-weight:800; color:var(--dark); margin-bottom:6px;">
+              Thank You!
+            </h2>
+
+            <p style="font-size:1rem; font-weight:700; color:var(--primary); margin-bottom:8px;">
+              Your upgrade request has been received.
+            </p>
+
+            <p style="font-size:0.9rem; color:var(--text-muted); line-height:1.5; margin-bottom:20px;">
+              You have been added to the <strong>Upgrade Waiting List</strong>.<br>Our team will contact you soon.
+            </p>
+
+            <div style="background:var(--primary-light); border:1.5px dashed var(--primary); padding:16px; border-radius:var(--radius-lg); margin-bottom:24px; text-align:center;">
+              <div style="font-size:0.8rem; font-weight:800; color:var(--primary-dark); text-transform:uppercase; letter-spacing:0.5px;">
+                🎁 THANK-YOU BONUS
+              </div>
+              <div style="font-size:1.2rem; font-weight:800; color:var(--dark); margin-top:4px;">
+                Your account received <span style="color:var(--primary);">+5 FREE Listings</span>!
+              </div>
+              <div style="font-size:0.82rem; color:var(--text-muted); margin-top:2px;">
+                You can now list up to 10 products on Rentiwa for FREE.
+              </div>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              <button onclick="Rentiwa.closeModal('upgrade-request-modal-overlay'); window.location.href='/pages/add-listing.html';" class="btn btn-primary btn-full btn-lg">
+                + List an Item Now
+              </button>
+              <button onclick="Rentiwa.closeModal('upgrade-request-modal-overlay'); location.reload();" class="btn btn-outline btn-full">
+                Close
+              </button>
+            </div>
+          </div>
+        `;
+      }
+    } catch (err) {
+      console.error("Error submitting upgrade request:", err);
+      this.showToast(err.message || 'Failed to submit request.', 'error');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = `<span>Submit Upgrade Request</span>`;
+      }
+    }
   },
 
   simulatePaymentUpgrade() {

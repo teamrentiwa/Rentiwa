@@ -2347,3 +2347,107 @@ img, video, canvas {
   transform: scale(1.05);
   box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25);
 }
+
+/* MODERN SEGMENTED PRICING TOGGLE FOR ADD LISTING */
+.segmented-pricing-toggle {
+  display: flex;
+  background: #f8fafc;
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  padding: 6px;
+  gap: 8px;
+  width: 100%;
+}
+
+.segmented-toggle-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: var(--radius-lg);
+  border: 2px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 0.98rem;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 52px;
+  user-select: none;
+}
+
+.segmented-toggle-btn:hover {
+  background: rgba(0, 0, 0, 0.03);
+  color: var(--dark);
+}
+
+.segmented-toggle-btn.active {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
+  box-shadow: 0 4px 14px rgba(255, 85, 0, 0.25);
+  transform: translateY(-1px);
+}
+
+.segmented-toggle-btn svg {
+  transition: transform 0.25s ease;
+}
+
+.segmented-toggle-btn.active svg {
+  transform: scale(1.1);
+}
+
+@media (max-width: 639.98px) {
+  .segmented-pricing-toggle {
+    flex-direction: column;
+    padding: 6px;
+    gap: 6px;
+  }
+  .segmented-toggle-btn {
+    width: 100%;
+    min-height: 48px;
+    font-size: 0.95rem;
+  }
+}
+
+/* UPGRADE REQUEST FORM RADIO CARDS */
+.upgrade-radio-card {
+  cursor: pointer;
+  width: 100%;
+}
+
+.upgrade-radio-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px 8px;
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: #f8fafc;
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--dark);
+  transition: all 0.2s ease;
+}
+
+.upgrade-radio-card input:checked + .upgrade-radio-content {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  box-shadow: 0 2px 8px rgba(255, 85, 0, 0.15);
+}
+
+.radio-icon {
+  font-size: 1.25rem;
+}
+
+@keyframes popSuccess {
+  0% { transform: scale(0.5); opacity: 0; }
+  80% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+

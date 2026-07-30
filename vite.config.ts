@@ -16,7 +16,6 @@ export default defineConfig(() => {
           signup: path.resolve(__dirname, 'pages/signup.html'),
           addListing: path.resolve(__dirname, 'pages/add-listing.html'),
           listing: path.resolve(__dirname, 'pages/listing.html'),
-          pricing: path.resolve(__dirname, 'pages/pricing.html'),
           allListings: path.resolve(__dirname, 'pages/all-listings.html'),
           profile: path.resolve(__dirname, 'pages/profile.html'),
         },

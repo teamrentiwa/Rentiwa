@@ -11,6 +11,7 @@ import {
   getFirestore, 
   collection, 
   addDoc, 
+  setDoc,
   serverTimestamp,
   getDocs,
   doc,
@@ -199,3 +200,79 @@ export const deleteListingFromFirestore = async (id: string) => {
   await deleteDoc(docRef);
   return true;
 };
+
+export interface UpgradeRequestParams {
+  name: string;
+  phone: string;
+  location: string;
+  occupation?: string;
+  helpfulAnswer: string;
+  feedback?: string;
+}
+
+export const submitUpgradeRequestToFirestore = async (params: UpgradeRequestParams) => {
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    throw new Error("You must be logged in to submit an upgrade request.");
+  }
+
+  const name = (params.name || "").trim();
+  const phone = (params.phone || "").trim();
+  const location = (params.location || "").trim();
+  const occupation = (params.occupation || "").trim();
+  const helpfulAnswer = (params.helpfulAnswer || "Yes").trim();
+  const feedback = (params.feedback || "").trim();
+
+  if (!name) throw new Error("Full Name is required.");
+  if (!phone) throw new Error("Phone Number is required.");
+  if (!location) throw new Error("Location / Area is required.");
+
+  const requestDoc = {
+    userId: currentUser.uid,
+    userEmail: currentUser.email || '',
+    name,
+    phone,
+    location,
+    occupation,
+    helpfulAnswer,
+    feedback,
+    currentPlan: "Free User",
+    requestDate: serverTimestamp(),
+    status: "Waiting"
+  };
+
+  const docRef = await addDoc(collection(db, "upgrade_requests"), requestDoc);
+
+  // Grant +5 free listings to user profile document in Firestore
+  try {
+    const userDocRef = doc(db, "users", currentUser.uid);
+    await setDoc(userDocRef, {
+      userId: currentUser.uid,
+      email: currentUser.email || '',
+      name,
+      phone,
+      extraFreeListings: 5, // Grant +5 free listings
+      hasUpgradeRequest: true,
+      lastUpdated: serverTimestamp()
+    }, { merge: true });
+  } catch (userErr) {
+    console.warn("Could not write user extra listings to Firestore users collection:", userErr);
+  }
+
+  return { id: docRef.id, ...requestDoc };
+};
+
+export const getUserProfileFromFirestore = async (uid: string) => {
+  try {
+    const userDocRef = doc(db, "users", uid);
+    const userDocSnap = await getDoc(userDocRef);
+    if (userDocSnap.exists()) {
+      return userDocSnap.data();
+    }
+    return null;
+  } catch (err) {
+    console.warn("Error fetching user profile from Firestore:", err);
+    return null;
+  }
+};
+

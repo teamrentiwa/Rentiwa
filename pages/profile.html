@@ -24,16 +24,11 @@
         </div>
 
         <div style="background:var(--bg-secondary); padding:14px; border-radius:var(--radius-md); text-align:left;">
-          <div style="font-size:0.75rem; color:var(--text-muted); font-weight:700;">CURRENT PLAN</div>
+          <div style="font-size:0.75rem; color:var(--text-muted); font-weight:700;">ACCOUNT STATUS</div>
           <div style="display:flex; align-items:center; justify-content:space-between; margin-top:4px;">
-            <span id="profile-plan-badge" class="badge badge-green">Free Plan</span>
-            <span style="font-size:0.8rem; font-weight:600;" id="profile-listings-usage">2/5 used</span>
+            <span id="profile-plan-badge" class="badge badge-green">Verified Account</span>
           </div>
         </div>
-
-        <button onclick="Rentiwa.openPremiumUpgradeModal()" class="btn btn-outline btn-full btn-sm">
-          ⭐ Upgrade to Premium (₹21)
-        </button>
 
         <hr style="border:none; border-top:1px solid var(--border-subtle);">
 
@@ -101,8 +96,9 @@
         if (usage) usage.innerText = 'Unlimited';
       } else {
         const count = activeUser.listingsCount || 0;
+        const limit = 5 + (activeUser.extraFreeListings || 0);
         const usage = document.getElementById('profile-listings-usage');
-        if (usage) usage.innerText = `${count}/5 used`;
+        if (usage) usage.innerText = `${count}/${limit} used`;
       }
 
       renderMyListings(activeUser.name);
