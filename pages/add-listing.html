@@ -39,7 +39,7 @@
             <!-- Category -->
             <div class="form-group">
               <label class="form-label" for="product-category">Category *</label>
-              <select id="product-category" class="form-select" required>
+              <select id="product-category" class="form-select" required onchange="toggleCustomCategoryField()">
                 <option value="">Select Category</option>
                 <option value="Photography">Photography & Cameras</option>
                 <option value="Events">Events & Speakers</option>
@@ -50,7 +50,18 @@
                 <option value="Vehicles">Bicycles & Cycles</option>
                 <option value="Music">Music & Microphones</option>
                 <option value="Furniture">Furniture & Tables</option>
+                <option value="Books & Stationery"> Books & Stationery</option>
+                <option value="Other">Other</option>
               </select>
+            </div>
+
+            <!-- Custom Category Group (Visible when Category is "Other") -->
+            <div class="form-group form-grid-full" id="group-custom-category" style="display:none; margin-top:-4px;">
+              <label class="form-label" for="custom-category">Category Name *</label>
+              <input type="text" id="custom-category" class="form-input" placeholder="Enter your category">
+              <div style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;">
+                Example: Medical Equipment, Baby Products, Art Supplies, Industrial Tools, Anything else...
+              </div>
             </div>
 
             <!-- Availability -->
@@ -198,14 +209,24 @@
 
             <div class="form-group">
               <label class="form-label" for="product-area">Area in Narela *</label>
-              <select id="product-area" class="form-select" required>
+              <select id="product-area" class="form-select" required onchange="toggleCustomAreaField()">
                 <option value="Narela Sector A6, Delhi">Narela Sector A6</option>
                 <option value="Safiabad Road, Narela">Safiabad Road</option>
                 <option value="Lampur Road, Narela">Lampur Road</option>
                 <option value="DSIIDC Industrial Area, Narela">DSIIDC Industrial Area</option>
                 <option value="Narela Mandi, Delhi">Narela Mandi</option>
                 <option value="Swatantra Nagar, Narela">Swatantra Nagar</option>
+                <option value="Other">Other</option>
               </select>
+            </div>
+
+            <!-- Custom Area Group (Visible when Area is "Other") -->
+            <div class="form-group form-grid-full" id="group-custom-area" style="display:none; margin-top:-4px;">
+              <label class="form-label" for="custom-area">Enter Your Area *</label>
+              <input type="text" id="custom-area" class="form-input" placeholder="e.g. Pocket 5, Shiv Mandir Road, Near XYZ School, My Village">
+              <div style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;">
+                Specify your sub-locality or landmark in Narela
+              </div>
             </div>
           </div>
         </div>
@@ -540,23 +561,83 @@
       if (!data.secure_url) {
         throw new Error('Cloudinary response missing secure_url');
       }
+    function toggleCustomCategoryField() {
+      const categorySelect = document.getElementById('product-category');
+      const customGroup = document.getElementById('group-custom-category');
+      const customInput = document.getElementById('custom-category');
 
-      return data.secure_url;
+      if (categorySelect && categorySelect.value === 'Other') {
+        if (customGroup) customGroup.style.display = 'block';
+        if (customInput) customInput.required = true;
+      } else {
+        if (customGroup) customGroup.style.display = 'none';
+        if (customInput) {
+          customInput.required = false;
+          customInput.value = '';
+        }
+      }
+    }
+
+    function toggleCustomAreaField() {
+      const areaSelect = document.getElementById('product-area');
+      const customGroup = document.getElementById('group-custom-area');
+      const customInput = document.getElementById('custom-area');
+
+      if (areaSelect && areaSelect.value === 'Other') {
+        if (customGroup) customGroup.style.display = 'block';
+        if (customInput) customInput.required = true;
+      } else {
+        if (customGroup) customGroup.style.display = 'none';
+        if (customInput) {
+          customInput.required = false;
+          customInput.value = '';
+        }
+      }
     }
 
     async function handleFormSubmit(e) {
       e.preventDefault();
-
       const submitBtn = document.querySelector('#add-listing-form button[type="submit"]');
 
       // 1. Gather & validate text inputs
       const title = (document.getElementById('product-title').value || '').trim();
-      const category = (document.getElementById('product-category').value || '').trim();
+      const selectedCat = (document.getElementById('product-category').value || '').trim();
+      const customCatVal = (document.getElementById('custom-category').value || '').trim();
+
+      if (!selectedCat) {
+        Rentiwa.showToast('Please select a category', 'error');
+        return;
+      }
+
+      if (selectedCat === 'Other' && !customCatVal) {
+        Rentiwa.showToast('Please enter your category name', 'error');
+        document.getElementById('custom-category').focus();
+        return;
+      }
+
+      const finalCategory = selectedCat === 'Other' ? customCatVal : selectedCat;
+
       const availability = (document.getElementById('product-availability').value || 'Available Now').trim();
       const description = (document.getElementById('product-desc').value || '').trim();
       const city = (document.getElementById('product-city').value || 'Narela, Delhi').trim();
-      const area = (document.getElementById('product-area').value || '').trim();
-      const location = area ? `${area}, ${city}` : city;
+      
+      const selectedAreaVal = (document.getElementById('product-area').value || '').trim();
+      const customAreaVal = (document.getElementById('custom-area').value || '').trim();
+
+      if (!selectedAreaVal) {
+        Rentiwa.showToast('Please select an area in Narela', 'error');
+        return;
+      }
+
+      if (selectedAreaVal === 'Other' && !customAreaVal) {
+        Rentiwa.showToast('Please enter your area', 'error');
+        document.getElementById('custom-area').focus();
+        return;
+      }
+
+      const finalArea = selectedAreaVal === 'Other' ? customAreaVal : selectedAreaVal;
+      const location = finalArea ? `${finalArea}, ${city}` : city;
+
       const ownerPhone = (document.getElementById('owner-phone').value || '').trim();
       const ownerWhatsapp = (document.getElementById('owner-whatsapp').value || '').trim();
       const rentalTerms = (document.getElementById('product-terms').value || '').trim();
@@ -567,10 +648,6 @@
 
       if (!title) {
         Rentiwa.showToast('Please enter a product name', 'error');
-        return;
-      }
-      if (!category) {
-        Rentiwa.showToast('Please select a category', 'error');
         return;
       }
       if (!price || price <= 0) {
@@ -636,7 +713,9 @@
       const productData = {
         title,
         productName: title,
-        category,
+        category: finalCategory,
+        selectedCategory: selectedCat,
+        customCategory: selectedCat === 'Other' ? customCatVal : '',
         availability,
         description,
         price,
@@ -646,7 +725,9 @@
         pricingMode: activePricingMode,
         priceType: activePricingMode,
         city,
-        area,
+        area: finalArea,
+        selectedArea: selectedAreaVal,
+        customArea: selectedAreaVal === 'Other' ? customAreaVal : '',
         location,
         ownerPhone,
         phoneNumber: ownerPhone,

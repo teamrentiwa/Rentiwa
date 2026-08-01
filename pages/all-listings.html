@@ -101,6 +101,8 @@
               <option value="Vehicles">🚲 Bicycles & Cycles</option>
               <option value="Music">🎤 Music & Audio</option>
               <option value="Furniture">🪑 Furniture & Stage</option>
+              <option value="Books & Stationery">📚 Books & Stationery</option>
+              <option value="Other">📦 Other Items</option>
             </select>
           </div>
 
@@ -190,9 +192,11 @@
 
       // Filter logic
       let filtered = allProducts.filter(p => {
-        const matchesCat = (catVal === 'All' || p.category === catVal);
-        const matchesSearch = (!searchVal || p.title.toLowerCase().includes(searchVal) || p.description.toLowerCase().includes(searchVal));
-        const matchesArea = (areaVal === 'all' || (p.area && p.area.includes(areaVal)) || (p.location && p.location.includes(areaVal)));
+        const pCat = p.category || '';
+        const pSelCat = p.selectedCategory || '';
+        const matchesCat = (catVal === 'All' || pCat === catVal || (catVal === 'Other' && pSelCat === 'Other'));
+        const matchesSearch = (!searchVal || p.title.toLowerCase().includes(searchVal) || p.description.toLowerCase().includes(searchVal) || pCat.toLowerCase().includes(searchVal) || (p.area && p.area.toLowerCase().includes(searchVal)));
+        const matchesArea = (areaVal === 'all' || (p.area && p.area.toLowerCase().includes(areaVal.toLowerCase())) || (p.location && p.location.toLowerCase().includes(areaVal.toLowerCase())));
         return matchesCat && matchesSearch && matchesArea;
       });
 

@@ -250,8 +250,14 @@ const Rentiwa = {
       : ((Array.isArray(d.images) && d.images.length > 0) ? d.images : []);
 
     const titleVal = d.productName || d.title || 'Untitled Listing';
+    const customCatVal = (d.customCategory && d.customCategory.trim()) ? d.customCategory.trim() : '';
+    const categoryVal = customCatVal || d.category || 'Other';
+    const selectedCatVal = d.selectedCategory || (customCatVal ? 'Other' : categoryVal);
+
     const cityVal = d.city || 'Narela, Delhi';
-    const areaVal = d.area || (d.location ? d.location.split(',')[0].trim() : '');
+    const customAreaVal = (d.customArea && d.customArea.trim()) ? d.customArea.trim() : '';
+    const areaVal = customAreaVal || d.area || (d.location ? d.location.split(',')[0].trim() : '');
+    const selectedAreaVal = d.selectedArea || (customAreaVal ? 'Other' : areaVal);
     const locationVal = d.location || (areaVal ? `${areaVal}, ${cityVal}` : cityVal);
     const priceVal = Number(d.rentalPrice !== undefined ? d.rentalPrice : d.price) || 0;
     const priceHourVal = Number(d.priceHour) || priceVal;
@@ -266,7 +272,9 @@ const Rentiwa = {
       title: titleVal,
       productName: titleVal,
       description: d.description || '',
-      category: d.category || 'Other',
+      category: categoryVal,
+      selectedCategory: selectedCatVal,
+      customCategory: customCatVal,
       price: priceVal,
       rentalPrice: priceVal,
       priceDay: priceDayVal,
@@ -276,6 +284,8 @@ const Rentiwa = {
       priceType: pricingModeVal,
       location: locationVal,
       area: areaVal,
+      selectedArea: selectedAreaVal,
+      customArea: customAreaVal,
       city: cityVal,
       images: images,
       productImages: images,
@@ -731,6 +741,7 @@ const Rentiwa = {
                 <option value="Vehicles" ${product.category === 'Vehicles' ? 'selected' : ''}>🚲 Bicycles & Cycles</option>
                 <option value="Music" ${product.category === 'Music' ? 'selected' : ''}>🎤 Music & Audio</option>
                 <option value="Furniture" ${product.category === 'Furniture' ? 'selected' : ''}>🪑 Furniture & Stage</option>
+                <option value="Books & Stationery" ${product.category === 'Books & Stationery' ? 'selected' : ''}>📚 Books & Stationery</option>
                 <option value="Other" ${product.category === 'Other' ? 'selected' : ''}>📦 Other Items</option>
               </select>
             </div>

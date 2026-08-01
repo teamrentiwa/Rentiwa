@@ -45,11 +45,15 @@ export interface SaveListingParams {
   productName?: string;
   description: string;
   category: string;
+  selectedCategory?: string;
+  customCategory?: string;
   price: number;
   rentalPrice?: number;
   location: string;
   city?: string;
   area?: string;
+  selectedArea?: string;
+  customArea?: string;
   images?: string[];
   productImages?: string[];
   pricingMode?: string;
@@ -76,9 +80,14 @@ export const saveListingToFirestore = async (params: SaveListingParams) => {
 
   const title = (params.title || params.productName || "").trim();
   const description = (params.description || "").trim();
-  const category = (params.category || "").trim();
+  const selectedCategory = (params.selectedCategory || "").trim();
+  const customCategory = (params.customCategory || "").trim();
+  const category = (customCategory || params.category || "").trim();
+  
+  const selectedArea = (params.selectedArea || "").trim();
+  const customArea = (params.customArea || "").trim();
+  const area = (customArea || params.area || "").trim();
   const city = (params.city || "Narela, Delhi").trim();
-  const area = (params.area || "").trim();
   const location = (params.location || (area ? `${area}, ${city}` : city)).trim();
   const price = Number(params.price || params.rentalPrice);
   const images = Array.isArray(params.images) ? params.images : (Array.isArray(params.productImages) ? params.productImages : []);
@@ -106,6 +115,8 @@ export const saveListingToFirestore = async (params: SaveListingParams) => {
     productName: title,
     description,
     category,
+    selectedCategory: selectedCategory || (customCategory ? 'Other' : category),
+    customCategory,
     price,
     rentalPrice: price,
     priceHour,
@@ -115,6 +126,8 @@ export const saveListingToFirestore = async (params: SaveListingParams) => {
     location,
     city,
     area,
+    selectedArea: selectedArea || (customArea ? 'Other' : area),
+    customArea,
     availability,
     images,
     productImages: images,
@@ -167,9 +180,13 @@ export const updateListingInFirestore = async (id: string, params: Partial<SaveL
   }
   if (params.description !== undefined) updateData.description = params.description.trim();
   if (params.category !== undefined) updateData.category = params.category.trim();
+  if (params.selectedCategory !== undefined) updateData.selectedCategory = params.selectedCategory.trim();
+  if (params.customCategory !== undefined) updateData.customCategory = params.customCategory.trim();
   if (params.location !== undefined) updateData.location = params.location.trim();
   if (params.city !== undefined) updateData.city = params.city.trim();
   if (params.area !== undefined) updateData.area = params.area.trim();
+  if (params.selectedArea !== undefined) updateData.selectedArea = params.selectedArea.trim();
+  if (params.customArea !== undefined) updateData.customArea = params.customArea.trim();
   if (params.availability !== undefined) updateData.availability = params.availability.trim();
   if (params.price !== undefined) {
     updateData.price = Number(params.price);
