@@ -57,10 +57,10 @@
 
             <!-- Custom Category Group (Visible when Category is "Other") -->
             <div class="form-group form-grid-full" id="group-custom-category" style="display:none; margin-top:-4px;">
-              <label class="form-label" for="custom-category">Category Name *</label>
+              <label class="form-label" for="custom-category">Custom Category *</label>
               <input type="text" id="custom-category" class="form-input" placeholder="Enter your category">
               <div style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;">
-                Example: Medical Equipment, Baby Products, Art Supplies, Industrial Tools, Anything else...
+                Examples: Drone Accessories, Medical Equipment, Baby Products, Art Supplies, Sports Gear, Camping Equipment, Musical Accessories
               </div>
             </div>
 
@@ -222,10 +222,10 @@
 
             <!-- Custom Area Group (Visible when Area is "Other") -->
             <div class="form-group form-grid-full" id="group-custom-area" style="display:none; margin-top:-4px;">
-              <label class="form-label" for="custom-area">Enter Your Area *</label>
-              <input type="text" id="custom-area" class="form-input" placeholder="e.g. Pocket 5, Shiv Mandir Road, Near XYZ School, My Village">
+              <label class="form-label" for="custom-area">Custom Area *</label>
+              <input type="text" id="custom-area" class="form-input" placeholder="Enter your area">
               <div style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;">
-                Specify your sub-locality or landmark in Narela
+                Examples: Village Lampur, Near Metro Station, Pocket 5, Near XYZ School, My Village
               </div>
             </div>
           </div>
@@ -561,6 +561,10 @@
       if (!data.secure_url) {
         throw new Error('Cloudinary response missing secure_url');
       }
+
+      return data.secure_url;
+    }
+
     function toggleCustomCategoryField() {
       const categorySelect = document.getElementById('product-category');
       const customGroup = document.getElementById('group-custom-category');
@@ -610,7 +614,7 @@
       }
 
       if (selectedCat === 'Other' && !customCatVal) {
-        Rentiwa.showToast('Please enter your category name', 'error');
+        Rentiwa.showToast('Please enter your custom category', 'error');
         document.getElementById('custom-category').focus();
         return;
       }
@@ -630,7 +634,7 @@
       }
 
       if (selectedAreaVal === 'Other' && !customAreaVal) {
-        Rentiwa.showToast('Please enter your area', 'error');
+        Rentiwa.showToast('Please enter your custom area', 'error');
         document.getElementById('custom-area').focus();
         return;
       }
