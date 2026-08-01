@@ -115,18 +115,32 @@
 
   <script type="module" src="/js/app.js"></script>
   <script>
-    function loadListingDetails() {
+    async function loadListingDetails() {
       const urlParams = new URLSearchParams(window.location.search);
       const productId = urlParams.get('id');
-      const product = Rentiwa.getProductById(productId);
+      if (!productId) {
+        document.getElementById('detail-title').innerText = 'Listing Not Found';
+        return;
+      }
+
+      const product = await Rentiwa.fetchListingById(productId);
 
       if (product) {
         document.title = `${product.title} - Rent in Narela | RENTIWA`;
-        document.getElementById('breadcrumb-title').innerText = product.title;
-        document.getElementById('detail-title').innerText = product.title;
-        document.getElementById('detail-category').innerText = product.category;
-        document.getElementById('detail-availability').innerText = `● ${product.availability}`;
-        document.getElementById('detail-location').innerText = product.location;
+        const breadcrumbEl = document.getElementById('breadcrumb-title');
+        if (breadcrumbEl) breadcrumbEl.innerText = product.title;
+
+        const titleEl = document.getElementById('detail-title');
+        if (titleEl) titleEl.innerText = product.title;
+
+        const catEl = document.getElementById('detail-category');
+        if (catEl) catEl.innerText = product.category;
+
+        const availEl = document.getElementById('detail-availability');
+        if (availEl) availEl.innerText = `● ${product.availability || 'Available Now'}`;
+
+        const locEl = document.getElementById('detail-location');
+        if (locEl) locEl.innerText = product.area ? `${product.area}, ${product.city}` : product.location;
         
         const priceBox = document.getElementById('detail-prices-box');
         if (priceBox) {
@@ -137,27 +151,40 @@
           `;
         }
 
-        document.getElementById('product-desc').innerText = product.description;
-        document.getElementById('product-terms').innerText = product.rentalTerms || 'Govt ID verification required at pick up.';
+        const descEl = document.getElementById('product-desc');
+        if (descEl) descEl.innerText = product.description || 'No description provided.';
 
-        document.getElementById('owner-name').innerText = product.ownerName;
-        document.getElementById('owner-avatar').src = product.ownerAvatar;
-        document.getElementById('owner-rating').innerText = product.ownerRating || '4.9';
-        document.getElementById('owner-joined').innerText = product.ownerJoined || '2026';
+        const termsEl = document.getElementById('product-terms');
+        if (termsEl) termsEl.innerText = product.rentalTerms || 'No special rental terms specified by owner.';
+
+        const nameEl = document.getElementById('owner-name');
+        if (nameEl) nameEl.innerText = product.ownerName || 'Verified Owner';
+
+        const avatarEl = document.getElementById('owner-avatar');
+        if (avatarEl) avatarEl.src = product.ownerPhoto || product.ownerAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80';
+
+        const ratingEl = document.getElementById('owner-rating');
+        if (ratingEl) ratingEl.innerText = product.rating || '5.0';
+
+        const joinedEl = document.getElementById('owner-joined');
+        if (joinedEl) joinedEl.innerText = Rentiwa.formatPostedTime ? Rentiwa.formatPostedTime(product.createdAt) : 'Recently';
 
         // Gallery
         const mainImg = document.getElementById('main-product-img');
-        if (mainImg && product.images && product.images[0]) {
-          mainImg.src = product.images[0];
+        const images = product.images || product.productImages || [];
+        if (mainImg && images.length > 0) {
+          mainImg.src = images[0];
         }
 
         const thumbsBox = document.getElementById('gallery-thumbs-box');
-        if (thumbsBox && product.images) {
-          thumbsBox.innerHTML = product.images.map((imgUrl, idx) => `
+        if (thumbsBox && images.length > 0) {
+          thumbsBox.innerHTML = images.map((imgUrl, idx) => `
             <div class="gallery-thumb ${idx === 0 ? 'active' : ''}" onclick="switchGalleryImage('${imgUrl}', this)">
               <img src="${imgUrl}" alt="Thumb">
             </div>
           `).join('');
+        } else if (thumbsBox) {
+          thumbsBox.innerHTML = '';
         }
 
         // Contact Box Logic (Logged Out vs Logged In)
@@ -165,6 +192,9 @@
 
         // Similar Products
         renderSimilarProducts(product.category, product.id);
+      } else {
+        document.getElementById('detail-title').innerText = 'Listing Not Found';
+        document.getElementById('product-desc').innerText = 'This product listing does not exist or has been removed.';
       }
     }
 
@@ -216,14 +246,18 @@
         `;
       }
 
+      const ownerPhone = product.ownerPhone || product.phoneNumber || '';
+      const ownerWhatsapp = product.ownerWhatsapp || product.whatsappNumber || ownerPhone;
+
       if (!user) {
+        const maskedPhone = ownerPhone ? (ownerPhone.substring(0, 7) + '*****') : '+91 98*** *****';
         contactBox.innerHTML = `
           <div class="contact-locked-box">
             <div style="font-size:1.5rem;">🔒</div>
             <div>
               <div style="font-weight:700; font-size:1rem; color:var(--dark);">Phone Number Hidden</div>
               <div style="font-size:0.82rem; color:var(--text-muted); margin-top:2px;">
-                Owner phone: +91 98*** *****
+                Owner phone: ${maskedPhone}
               </div>
             </div>
             <button onclick="Rentiwa.openLoginModal()" class="btn btn-primary btn-full">
@@ -232,8 +266,9 @@
           </div>
         `;
       } else {
+        const whatsappDigits = ownerWhatsapp.replace(/\D/g, '');
         const encodedMsg = encodeURIComponent(`Hi ${product.ownerName || 'Owner'}, I saw your listing for "${product.title}" on Rentiwa and would like to rent it in Narela.`);
-        const whatsappUrl = `https://wa.me/${product.ownerWhatsapp}?text=${encodedMsg}`;
+        const whatsappUrl = `https://wa.me/${whatsappDigits}?text=${encodedMsg}`;
 
         contactBox.innerHTML = `
           <div style="display:flex; flex-direction:column; gap:12px;">
@@ -246,7 +281,7 @@
             <div style="background:var(--primary-light); padding:16px; border-radius:var(--radius-md); text-align:center;">
               <div style="font-size:0.78rem; color:var(--primary-dark); font-weight:700; text-transform:uppercase;">Owner Direct Contact</div>
               <div style="font-family:var(--font-heading); font-size:1.3rem; font-weight:800; color:var(--dark); margin-top:4px;">
-                📞 ${product.ownerPhone}
+                📞 ${ownerPhone}
               </div>
             </div>
 
@@ -255,8 +290,8 @@
               Chat on WhatsApp
             </a>
 
-            <a href="tel:${product.ownerPhone}" class="btn btn-secondary btn-full">
-              Call Owner Directly
+            <a href="tel:${ownerPhone}" class="btn btn-secondary btn-full">
+              Call Owner Directly (${ownerPhone})
             </a>
 
             ${ownerActionsHTML}

@@ -254,10 +254,10 @@
     let activePricingMode = 'day';
 
     document.addEventListener('DOMContentLoaded', () => {
-      const user = Rentiwa.getUser() || Rentiwa.defaultUser;
-      if (user) {
-        document.getElementById('owner-phone').value = user.phone || '+91 98765 43210';
-        document.getElementById('owner-whatsapp').value = '919876543210';
+      const user = Rentiwa.getUser();
+      if (user && user.phone) {
+        document.getElementById('owner-phone').value = user.phone;
+        document.getElementById('owner-whatsapp').value = user.phone.replace(/\D/g, '');
       }
     });
 
@@ -552,9 +552,14 @@
       // 1. Gather & validate text inputs
       const title = (document.getElementById('product-title').value || '').trim();
       const category = (document.getElementById('product-category').value || '').trim();
+      const availability = (document.getElementById('product-availability').value || 'Available Now').trim();
       const description = (document.getElementById('product-desc').value || '').trim();
+      const city = (document.getElementById('product-city').value || 'Narela, Delhi').trim();
       const area = (document.getElementById('product-area').value || '').trim();
-      const location = area ? `${area}, Delhi` : 'Narela, Delhi';
+      const location = area ? `${area}, ${city}` : city;
+      const ownerPhone = (document.getElementById('owner-phone').value || '').trim();
+      const ownerWhatsapp = (document.getElementById('owner-whatsapp').value || '').trim();
+      const rentalTerms = (document.getElementById('product-terms').value || '').trim();
 
       const hourVal = parseInt(document.getElementById('product-price-hour').value) || 0;
       const dayVal = parseInt(document.getElementById('product-price-day').value) || 0;
@@ -574,6 +579,14 @@
       }
       if (!description) {
         Rentiwa.showToast('Please enter a product description', 'error');
+        return;
+      }
+      if (!ownerPhone) {
+        Rentiwa.showToast('Please enter your Phone Number', 'error');
+        return;
+      }
+      if (!ownerWhatsapp) {
+        Rentiwa.showToast('Please enter your WhatsApp Number', 'error');
         return;
       }
 
@@ -613,21 +626,38 @@
         return; // Stop execution; do NOT create Firestore listing
       }
 
-      // 4. Save listing data with Cloudinary secure_urls into Firestore
+      // 4. Save complete listing data with Cloudinary secure_urls into Firestore
       if (submitBtn) {
-        submitBtn.innerHTML = `<span>Saving Listing...</span>`;
+        submitBtn.innerHTML = `<span>Saving Listing to Firestore...</span>`;
       }
+
+      const currentUser = Rentiwa.getUser();
 
       const productData = {
         title,
+        productName: title,
         category,
+        availability,
         description,
         price,
+        rentalPrice: price,
         priceHour: hourVal,
         priceDay: dayVal,
         pricingMode: activePricingMode,
+        priceType: activePricingMode,
+        city,
+        area,
         location,
-        images: cloudinaryUrls
+        ownerPhone,
+        phoneNumber: ownerPhone,
+        ownerWhatsapp,
+        whatsappNumber: ownerWhatsapp,
+        rentalTerms,
+        images: cloudinaryUrls,
+        productImages: cloudinaryUrls,
+        ownerName: currentUser?.name || 'Verified Owner',
+        ownerEmail: currentUser?.email || '',
+        ownerPhoto: currentUser?.avatar || ''
       };
 
       try {

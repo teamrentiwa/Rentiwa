@@ -1,8 +1,21 @@
 import path from 'path';
-import {defineConfig} from 'vite';
+import {defineConfig, Plugin} from 'vite';
+
+const adminRewritePlugin = (): Plugin => ({
+  name: 'admin-rewrite',
+  configureServer(server) {
+    server.middlewares.use((req, _res, next) => {
+      if (req.url === '/admin' || req.url === '/admin/') {
+        req.url = '/pages/admin.html';
+      }
+      next();
+    });
+  }
+});
 
 export default defineConfig(() => {
   return {
+    plugins: [adminRewritePlugin()],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
@@ -18,6 +31,7 @@ export default defineConfig(() => {
           listing: path.resolve(__dirname, 'pages/listing.html'),
           allListings: path.resolve(__dirname, 'pages/all-listings.html'),
           profile: path.resolve(__dirname, 'pages/profile.html'),
+          admin: path.resolve(__dirname, 'pages/admin.html'),
         },
       },
     },

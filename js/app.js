@@ -4,7 +4,34 @@
  * Phase 1 MVP - Narela (Delhi) Initial Launch
  */
 
-import { auth, signInWithGoogle, logoutGoogle, onAuthChange, saveListingToFirestore, fetchActiveListingsFromFirestore, getListingByIdFromFirestore, deleteListingFromFirestore, submitUpgradeRequestToFirestore, getUserProfileFromFirestore, updateListingInFirestore, onListingsSnapshot } from '/src/firebase.ts';
+import { 
+  auth, 
+  signInWithGoogle, 
+  logoutGoogle, 
+  onAuthChange, 
+  saveListingToFirestore, 
+  fetchActiveListingsFromFirestore, 
+  getListingByIdFromFirestore, 
+  deleteListingFromFirestore, 
+  submitUpgradeRequestToFirestore, 
+  getUserProfileFromFirestore, 
+  updateListingInFirestore, 
+  onListingsSnapshot,
+  ensureUserDocumentInFirestore,
+  getUserRoleFromFirestore,
+  adminFetchAllListings,
+  adminUpdateListingStatus,
+  adminUpdateListing,
+  adminDeleteListing,
+  adminFetchAllUsers,
+  adminUpdateUser,
+  adminDeleteUser,
+  adminFetchUpgradeRequests,
+  adminApproveUpgradeRequest,
+  adminRejectUpgradeRequest,
+  adminGetSettings,
+  adminSaveSettings
+} from '/src/firebase.ts';
 
 // Global State Manager
 const Rentiwa = {
@@ -113,7 +140,7 @@ const Rentiwa = {
   },
 
   setupAuthListener() {
-    onAuthChange((fbUser) => {
+    onAuthChange(async (fbUser) => {
       this.isAuthLoading = false;
       if (fbUser) {
         this.currentAuthUser = {
@@ -129,6 +156,13 @@ const Rentiwa = {
           avatar: fbUser.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
         };
 
+        // Create or update user document in Firestore users/{uid}
+        try {
+          await ensureUserDocumentInFirestore(fbUser);
+        } catch (e) {
+          console.warn("ensureUserDocumentInFirestore error:", e);
+        }
+
         // Fetch user profile from Firestore to restore bonus listings & details
         getUserProfileFromFirestore(fbUser.uid).then((prof) => {
           if (prof) {
@@ -140,6 +174,9 @@ const Rentiwa = {
             }
             if (prof.name) {
               this.currentAuthUser.name = prof.name;
+            }
+            if (prof.role) {
+              this.currentAuthUser.role = prof.role;
             }
             this.updateUserNavUI();
             if (typeof window.onRentiwaAuthUpdate === 'function') {
@@ -208,42 +245,58 @@ const Rentiwa = {
   },
 
   mapFirestoreDocToProduct(d) {
-    const images = Array.isArray(d.images) && d.images.length > 0 
-      ? d.images 
-      : ['https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80'];
-    const loc = d.location || 'Narela, Delhi';
-    const areaPart = loc.split(',')[0].trim() || 'Narela';
-    const priceVal = Number(d.price) || 0;
+    const images = (Array.isArray(d.productImages) && d.productImages.length > 0)
+      ? d.productImages
+      : ((Array.isArray(d.images) && d.images.length > 0) ? d.images : []);
+
+    const titleVal = d.productName || d.title || 'Untitled Listing';
+    const cityVal = d.city || 'Narela, Delhi';
+    const areaVal = d.area || (d.location ? d.location.split(',')[0].trim() : '');
+    const locationVal = d.location || (areaVal ? `${areaVal}, ${cityVal}` : cityVal);
+    const priceVal = Number(d.rentalPrice !== undefined ? d.rentalPrice : d.price) || 0;
     const priceHourVal = Number(d.priceHour) || priceVal;
     const priceDayVal = Number(d.priceDay) || priceVal;
-    const pricingModeVal = d.pricingMode || d.pricingType || (d.priceHour && d.priceDay ? 'both' : (d.priceHour ? 'hour' : 'day'));
+    const pricingModeVal = d.priceType || d.pricingMode || d.pricingType || (d.priceHour && d.priceDay ? 'both' : (d.priceHour ? 'hour' : 'day'));
+    const phoneVal = d.phoneNumber || d.ownerPhone || '';
+    const whatsappVal = d.whatsappNumber || d.ownerWhatsapp || phoneVal;
+    const avatarVal = d.ownerPhoto || d.ownerAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80';
 
     return {
       id: d.id,
-      title: d.title || 'Untitled Listing',
+      title: titleVal,
+      productName: titleVal,
       description: d.description || '',
       category: d.category || 'Other',
       price: priceVal,
+      rentalPrice: priceVal,
       priceDay: priceDayVal,
       priceHour: priceHourVal,
       pricingType: pricingModeVal,
-      location: loc,
-      area: areaPart,
-      city: 'Delhi',
+      pricingMode: pricingModeVal,
+      priceType: pricingModeVal,
+      location: locationVal,
+      area: areaVal,
+      city: cityVal,
       images: images,
+      productImages: images,
       ownerId: d.ownerId || '',
       ownerUid: d.ownerId || '',
-      ownerName: d.ownerName || 'Rentiwa User',
+      ownerName: d.ownerName || 'Verified Owner',
       ownerEmail: d.ownerEmail || '',
-      ownerPhone: d.ownerPhone || '+91 98765 00112',
-      ownerWhatsapp: d.ownerWhatsapp || d.ownerPhone || '+91 98765 00112',
-      ownerAvatar: d.ownerAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
-      status: d.status || 'active',
+      ownerPhone: phoneVal,
+      phoneNumber: phoneVal,
+      ownerWhatsapp: whatsappVal,
+      whatsappNumber: whatsappVal,
+      ownerPhoto: avatarVal,
+      ownerAvatar: avatarVal,
+      status: d.listingStatus || d.status || 'active',
+      listingStatus: d.listingStatus || d.status || 'active',
       createdAt: d.createdAt,
-      availability: 'Available',
-      rating: 5.0,
-      reviewCount: 1,
-      rentalTerms: 'Aadhaar ID copy required at pick up.'
+      updatedAt: d.updatedAt || d.createdAt,
+      availability: d.availability || 'Available Now',
+      rentalTerms: d.rentalTerms || '',
+      rating: d.rating || 5.0,
+      reviewCount: d.reviewCount || 1
     };
   },
 
@@ -255,8 +308,28 @@ const Rentiwa = {
   },
 
   getProductById(id) {
-    if (!id) return this.firestoreListings[0] || null;
+    if (!id) return null;
     return this.firestoreListings.find(p => p.id === id || String(p.id) === String(id)) || null;
+  },
+
+  async fetchListingById(id) {
+    if (!id) return null;
+    let found = this.getProductById(id);
+    if (found) return found;
+
+    try {
+      const rawDoc = await getListingByIdFromFirestore(id);
+      if (rawDoc) {
+        const product = this.mapFirestoreDocToProduct(rawDoc);
+        if (!this.firestoreListings.some(p => p.id === product.id)) {
+          this.firestoreListings.push(product);
+        }
+        return product;
+      }
+    } catch (err) {
+      console.warn("fetchListingById error:", err);
+    }
+    return null;
   },
 
   async saveProduct(productData) {
@@ -1356,6 +1429,22 @@ const Rentiwa = {
       setTimeout(() => toast.remove(), 250);
     }, 3200);
   },
+
+  // Admin Helpers
+  ensureUserDocumentInFirestore,
+  getUserRoleFromFirestore,
+  adminFetchAllListings,
+  adminUpdateListingStatus,
+  adminUpdateListing,
+  adminDeleteListing,
+  adminFetchAllUsers,
+  adminUpdateUser,
+  adminDeleteUser,
+  adminFetchUpgradeRequests,
+  adminApproveUpgradeRequest,
+  adminRejectUpgradeRequest,
+  adminGetSettings,
+  adminSaveSettings,
 
   // Global Event Binding
   bindGlobalEvents() {
