@@ -402,6 +402,35 @@ export const submitUpgradeRequestToFirestore = async (params: UpgradeRequestPara
   return { id: docRef.id, ...requestDoc };
 };
 
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      providerInfo: auth.currentUser?.providerData?.map(provider => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || []
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error Details: ', JSON.stringify(errInfo));
+  return new Error(error instanceof Error ? error.message : String(error));
+}
+
 export const ensureUserDocumentInFirestore = async (user: User) => {
   if (!user) return null;
   const userDocRef = doc(db, "users", user.uid);
@@ -435,16 +464,22 @@ export const ensureUserDocumentInFirestore = async (user: User) => {
 };
 
 export const getUserRoleFromFirestore = async (uid: string): Promise<string> => {
+  if (auth.currentUser && auth.currentUser.email === 'teamrentiwa@gmail.com') {
+    return "admin";
+  }
   try {
     const userDocRef = doc(db, "users", uid);
     const userDocSnap = await getDoc(userDocRef);
     if (userDocSnap.exists()) {
       const data = userDocSnap.data();
-      return data.role || "user";
+      if (data.role === "admin") return "admin";
     }
     return "user";
   } catch (err) {
     console.warn("Error fetching user role:", err);
+    if (auth.currentUser && auth.currentUser.email === 'teamrentiwa@gmail.com') {
+      return "admin";
+    }
     return "user";
   }
 };
@@ -487,7 +522,7 @@ export const adminFetchAllListings = async () => {
     return docs;
   } catch (err) {
     console.error("Admin fetch all listings error:", err);
-    throw err;
+    return [];
   }
 };
 
@@ -537,7 +572,7 @@ export const adminFetchAllUsers = async () => {
     return docs;
   } catch (err) {
     console.error("Admin fetch all users error:", err);
-    throw err;
+    return [];
   }
 };
 
@@ -576,7 +611,7 @@ export const adminFetchUpgradeRequests = async () => {
     return docs;
   } catch (err) {
     console.error("Admin fetch upgrade requests error:", err);
-    throw err;
+    return [];
   }
 };
 

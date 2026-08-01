@@ -1,0 +1,74 @@
+[build]
+  publish = "dist"
+  command = "npm run build"
+
+# Redirect /admin to /pages/admin.html
+[[redirects]]
+  from = "/admin"
+  to = "/pages/admin.html"
+  status = 200
+
+[[redirects]]
+  from = "/admin/*"
+  to = "/pages/admin.html"
+  status = 200
+
+# Redirect /all-listings to /pages/all-listings.html
+[[redirects]]
+  from = "/all-listings"
+  to = "/pages/all-listings.html"
+  status = 200
+
+# Redirect /login to /pages/login.html
+[[redirects]]
+  from = "/login"
+  to = "/pages/login.html"
+  status = 200
+
+# Redirect /signup to /pages/signup.html
+[[redirects]]
+  from = "/signup"
+  to = "/pages/signup.html"
+  status = 200
+
+# Redirect /add-listing to /pages/add-listing.html
+[[redirects]]
+  from = "/add-listing"
+  to = "/pages/add-listing.html"
+  status = 200
+
+# Redirect /profile to /pages/profile.html
+[[redirects]]
+  from = "/profile"
+  to = "/pages/profile.html"
+  status = 200
+
+# Redirect /listing/* to /pages/listing.html
+[[redirects]]
+  from = "/listing/*"
+  to = "/pages/listing.html"
+  status = 200
+
+# Redirect /terms to /pages/terms.html
+[[redirects]]
+  from = "/terms"
+  to = "/pages/terms.html"
+  status = 200
+
+# Redirect /privacy to /pages/terms.html
+[[redirects]]
+  from = "/privacy"
+  to = "/pages/terms.html"
+  status = 200
+
+# Redirect /my-listings to /pages/profile.html
+[[redirects]]
+  from = "/my-listings"
+  to = "/pages/profile.html"
+  status = 200
+
+# Catch-all SPA rewrite to index.html for all other routes
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
