@@ -532,7 +532,7 @@ export enum OperationType {
   WRITE = 'write',
 }
 
-export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): never {
   const errInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
@@ -549,7 +549,7 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     path
   };
   console.error('Firestore Error Details: ', JSON.stringify(errInfo));
-  return new Error(error instanceof Error ? error.message : String(error));
+  throw new Error(JSON.stringify(errInfo));
 }
 
 export const ensureUserDocumentInFirestore = async (user: User) => {
