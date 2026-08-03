@@ -21,7 +21,9 @@ import {
   query,
   where,
   orderBy,
-  onSnapshot
+  onSnapshot,
+  limit,
+  startAfter
 } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -216,9 +218,14 @@ export const updateListingInFirestore = async (id: string, params: Partial<SaveL
   return { id, ...existingData, ...updateData };
 };
 
-export const onListingsSnapshot = (callback: (listings: any[]) => void) => {
+export const onListingsSnapshot = (callback: (listings: any[]) => void, limitCount: number = 8) => {
   const listingsRef = collection(db, "listings");
-  const q = query(listingsRef, where("status", "==", "active"));
+  const q = query(
+    listingsRef,
+    where("status", "==", "active"),
+    orderBy("createdAt", "desc"),
+    limit(limitCount)
+  );
   
   return onSnapshot(q, (snapshot) => {
     const docs = snapshot.docs.map(docSnap => {
@@ -229,7 +236,7 @@ export const onListingsSnapshot = (callback: (listings: any[]) => void) => {
         createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : (data.createdAt || Date.now())
       };
     });
-    // Sort descending by createdAt
+    // Ensure sorted descending by createdAt
     docs.sort((a, b) => {
       const timeA = typeof a.createdAt === 'number' ? a.createdAt : 0;
       const timeB = typeof b.createdAt === 'number' ? b.createdAt : 0;
@@ -237,7 +244,28 @@ export const onListingsSnapshot = (callback: (listings: any[]) => void) => {
     });
     callback(docs);
   }, (err) => {
-    console.warn("Real-time listings snapshot error:", err);
+    console.warn("Real-time listings snapshot with orderBy failed, fallback query without orderBy:", err);
+    try {
+      const qFallback = query(listingsRef, where("status", "==", "active"), limit(limitCount));
+      return onSnapshot(qFallback, (snapshotFallback) => {
+        const docs = snapshotFallback.docs.map(docSnap => {
+          const data = docSnap.data();
+          return {
+            id: docSnap.id,
+            ...data,
+            createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : (data.createdAt || Date.now())
+          };
+        });
+        docs.sort((a, b) => {
+          const timeA = typeof a.createdAt === 'number' ? a.createdAt : 0;
+          const timeB = typeof b.createdAt === 'number' ? b.createdAt : 0;
+          return timeB - timeA;
+        });
+        callback(docs);
+      });
+    } catch (e) {
+      console.warn("Snapshot fallback failed:", e);
+    }
   });
 };
 
@@ -274,13 +302,14 @@ export const onAuthChange = (callback: (user: User | null) => void) => {
   return onAuthStateChanged(auth, callback);
 };
 
-export const fetchActiveListingsFromFirestore = async () => {
+export const fetchActiveListingsFromFirestore = async (limitCount: number = 8) => {
   const listingsRef = collection(db, "listings");
   try {
     const q = query(
       listingsRef,
       where("status", "==", "active"),
-      orderBy("createdAt", "desc")
+      orderBy("createdAt", "desc"),
+      limit(limitCount)
     );
     const snapshot = await getDocs(q);
     return snapshot.docs.map(docSnap => {
@@ -294,7 +323,7 @@ export const fetchActiveListingsFromFirestore = async () => {
   } catch (err) {
     console.warn("Firestore query with orderBy failed, attempting fallback query without orderBy:", err);
     try {
-      const qFallback = query(listingsRef, where("status", "==", "active"));
+      const qFallback = query(listingsRef, where("status", "==", "active"), limit(limitCount));
       const snapshot = await getDocs(qFallback);
       const docs = snapshot.docs.map(docSnap => {
         const data = docSnap.data();
@@ -313,6 +342,81 @@ export const fetchActiveListingsFromFirestore = async () => {
     } catch (fallbackErr) {
       console.warn("Firestore fallback query failed:", fallbackErr);
       return [];
+    }
+  }
+};
+
+export interface FetchPaginatedParams {
+  pageSize?: number;
+  lastDocSnap?: any;
+}
+
+export const fetchPaginatedListingsFromFirestore = async ({ pageSize = 20, lastDocSnap = null }: FetchPaginatedParams = {}) => {
+  const listingsRef = collection(db, "listings");
+  try {
+    const constraints: any[] = [
+      where("status", "==", "active"),
+      orderBy("createdAt", "desc")
+    ];
+
+    if (lastDocSnap) {
+      constraints.push(startAfter(lastDocSnap));
+    }
+    constraints.push(limit(pageSize));
+
+    const q = query(listingsRef, ...constraints);
+    const snapshot = await getDocs(q);
+
+    const docs = snapshot.docs.map(docSnap => {
+      const data = docSnap.data();
+      return {
+        id: docSnap.id,
+        _docSnap: docSnap,
+        ...data,
+        createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : (data.createdAt || Date.now())
+      };
+    });
+
+    const hasMore = snapshot.docs.length === pageSize;
+    const newLastDocSnap = snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1] : null;
+
+    return {
+      docs,
+      hasMore,
+      lastDocSnap: newLastDocSnap
+    };
+  } catch (err) {
+    console.warn("Paginated query with orderBy failed, using fallback without orderBy:", err);
+    try {
+      const fallbackConstraints: any[] = [where("status", "==", "active")];
+      if (lastDocSnap) {
+        fallbackConstraints.push(startAfter(lastDocSnap));
+      }
+      fallbackConstraints.push(limit(pageSize));
+
+      const qFallback = query(listingsRef, ...fallbackConstraints);
+      const snapshot = await getDocs(qFallback);
+      const docs = snapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        return {
+          id: docSnap.id,
+          _docSnap: docSnap,
+          ...data,
+          createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : (data.createdAt || Date.now())
+        };
+      });
+
+      const hasMore = snapshot.docs.length === pageSize;
+      const newLastDocSnap = snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1] : null;
+
+      return {
+        docs,
+        hasMore,
+        lastDocSnap: newLastDocSnap
+      };
+    } catch (fallbackErr) {
+      console.error("Fallback paginated query failed:", fallbackErr);
+      return { docs: [], hasMore: false, lastDocSnap: null };
     }
   }
 };
@@ -519,11 +623,12 @@ export const getUserProfileFromFirestore = async (uid: string) => {
    ADMIN PANEL FIRESTORE HELPER FUNCTIONS
    ==================================================== */
 
-export const adminFetchAllListings = async () => {
+export const adminFetchAllListings = async (limitCount: number = 100) => {
   try {
     const listingsRef = collection(db, "listings");
-    const snapshot = await getDocs(listingsRef);
-    const docs = snapshot.docs.map(docSnap => {
+    const q = query(listingsRef, orderBy("createdAt", "desc"), limit(limitCount));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(docSnap => {
       const data = docSnap.data();
       return {
         id: docSnap.id,
@@ -531,15 +636,30 @@ export const adminFetchAllListings = async () => {
         createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : (data.createdAt || Date.now())
       };
     });
-    docs.sort((a, b) => {
-      const timeA = typeof a.createdAt === 'number' ? a.createdAt : 0;
-      const timeB = typeof b.createdAt === 'number' ? b.createdAt : 0;
-      return timeB - timeA;
-    });
-    return docs;
   } catch (err) {
-    console.error("Admin fetch all listings error:", err);
-    return [];
+    console.warn("Admin fetch with orderBy failed, fallback to standard query:", err);
+    try {
+      const listingsRef = collection(db, "listings");
+      const qFallback = query(listingsRef, limit(limitCount));
+      const snapshot = await getDocs(qFallback);
+      const docs = snapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        return {
+          id: docSnap.id,
+          ...data,
+          createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : (data.createdAt || Date.now())
+        };
+      });
+      docs.sort((a, b) => {
+        const timeA = typeof a.createdAt === 'number' ? a.createdAt : 0;
+        const timeB = typeof b.createdAt === 'number' ? b.createdAt : 0;
+        return timeB - timeA;
+      });
+      return docs;
+    } catch (e) {
+      console.error("Admin fetch all listings error:", e);
+      return [];
+    }
   }
 };
 
@@ -738,7 +858,7 @@ export const submitPromotionRequestToFirestore = async (params: PromotionRequest
 export const fetchActiveFeaturedListingsFromFirestore = async () => {
   try {
     const ref = collection(db, "featuredListings");
-    const q = query(ref, where("status", "==", "Active"));
+    const q = query(ref, where("status", "==", "Active"), limit(10));
     const snapshot = await getDocs(q);
     const now = Date.now();
     const activeListings: any[] = [];

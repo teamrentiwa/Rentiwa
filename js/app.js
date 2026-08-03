@@ -11,6 +11,7 @@ import {
   onAuthChange, 
   saveListingToFirestore, 
   fetchActiveListingsFromFirestore, 
+  fetchPaginatedListingsFromFirestore,
   getListingByIdFromFirestore, 
   deleteListingFromFirestore, 
   submitUpgradeRequestToFirestore, 
@@ -133,9 +134,6 @@ const Rentiwa = {
         if (typeof window.filterHomeProducts === 'function') {
           window.filterHomeProducts();
         }
-        if (typeof window.applyFilters === 'function') {
-          window.applyFilters();
-        }
         if (typeof window.renderMyListings === 'function') {
           const user = this.getUser();
           window.renderMyListings(user ? user.name : '');
@@ -143,7 +141,7 @@ const Rentiwa = {
         if (typeof window.loadListingDetails === 'function') {
           window.loadListingDetails();
         }
-      });
+      }, 8);
     } catch (err) {
       console.warn("Real-time listings snapshot listener error:", err);
     }
@@ -225,10 +223,10 @@ const Rentiwa = {
     }
   },
 
-  async fetchListings() {
+  async fetchListings(limitCount = 8) {
     this.isListingsLoading = true;
     try {
-      const rawDocs = await fetchActiveListingsFromFirestore();
+      const rawDocs = await fetchActiveListingsFromFirestore(limitCount);
       this.firestoreListings = rawDocs.map(d => this.mapFirestoreDocToProduct(d));
       this.listingsLoaded = true;
     } catch (err) {
@@ -240,9 +238,6 @@ const Rentiwa = {
       if (typeof window.filterHomeProducts === 'function') {
         window.filterHomeProducts();
       }
-      if (typeof window.applyFilters === 'function') {
-        window.applyFilters();
-      }
       if (typeof window.renderMyListings === 'function') {
         const user = this.getUser();
         window.renderMyListings(user ? user.name : '');
@@ -252,6 +247,21 @@ const Rentiwa = {
       }
     }
     return this.firestoreListings;
+  },
+
+  async fetchPaginatedListings(params = {}) {
+    try {
+      const result = await fetchPaginatedListingsFromFirestore(params);
+      const mappedDocs = result.docs.map(d => this.mapFirestoreDocToProduct(d));
+      return {
+        docs: mappedDocs,
+        hasMore: result.hasMore,
+        lastDocSnap: result.lastDocSnap
+      };
+    } catch (err) {
+      console.error("fetchPaginatedListings error:", err);
+      return { docs: [], hasMore: false, lastDocSnap: null };
+    }
   },
 
   mapFirestoreDocToProduct(d) {

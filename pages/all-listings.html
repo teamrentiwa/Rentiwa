@@ -148,6 +148,13 @@
       <div class="products-grid" id="all-products-grid">
         <!-- Products populated via JS -->
       </div>
+
+      <!-- LOAD MORE CONTAINER -->
+      <div id="load-more-container" style="text-align:center; margin-top:36px; display:none;">
+        <button id="btn-load-more" onclick="loadMoreListings()" class="btn btn-outline btn-lg" style="padding:12px 36px; font-weight:600;">
+          Load More Products
+        </button>
+      </div>
     </div>
   </main>
 
@@ -157,7 +164,12 @@
   <!-- Scripts -->
   <script type="module" src="/js/app.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
+    let loadedProducts = [];
+    let lastDocSnap = null;
+    let hasMoreListings = false;
+    let isFetchingListings = false;
+
+    document.addEventListener('DOMContentLoaded', async () => {
       // Check for URL query category
       const urlParams = new URLSearchParams(window.location.search);
       const catParam = urlParams.get('category');
@@ -165,19 +177,78 @@
         const catSelect = document.getElementById('all-category-select');
         if (catSelect) catSelect.value = catParam;
       }
-      applyFilters();
+      
+      await loadInitialListings();
     });
 
+    async function loadInitialListings() {
+      const grid = document.getElementById('all-products-grid');
+      if (grid) {
+        grid.innerHTML = `
+          <div style="grid-column: 1/-1; text-align:center; padding:60px 20px; background:var(--bg-secondary); border-radius:var(--radius-lg);">
+            <p style="font-size:1rem; color:var(--text-muted);">Loading listings from Firestore...</p>
+          </div>
+        `;
+      }
+      
+      isFetchingListings = true;
+      try {
+        if (window.Rentiwa && typeof window.Rentiwa.fetchPaginatedListings === 'function') {
+          const res = await window.Rentiwa.fetchPaginatedListings({ pageSize: 20, lastDocSnap: null });
+          loadedProducts = res.docs || [];
+          lastDocSnap = res.lastDocSnap;
+          hasMoreListings = res.hasMore;
+        } else {
+          setTimeout(loadInitialListings, 200);
+          return;
+        }
+      } catch (err) {
+        console.error("Error loading initial listings:", err);
+        loadedProducts = [];
+      } finally {
+        isFetchingListings = false;
+        applyFilters();
+      }
+    }
+
+    async function loadMoreListings() {
+      if (isFetchingListings || !hasMoreListings) return;
+      const btn = document.getElementById('btn-load-more');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerText = 'Loading...';
+      }
+
+      isFetchingListings = true;
+      try {
+        const res = await window.Rentiwa.fetchPaginatedListings({ pageSize: 20, lastDocSnap: lastDocSnap });
+        const newDocs = res.docs || [];
+        loadedProducts = [...loadedProducts, ...newDocs];
+        lastDocSnap = res.lastDocSnap;
+        hasMoreListings = res.hasMore;
+      } catch (err) {
+        console.error("Error loading more listings:", err);
+      } finally {
+        isFetchingListings = false;
+        if (btn) {
+          btn.disabled = false;
+          btn.innerText = 'Load More Products';
+        }
+        applyFilters();
+      }
+    }
+
     function applyFilters() {
-      const searchVal = document.getElementById('all-search-input').value.toLowerCase().trim();
-      const catVal = document.getElementById('all-category-select').value;
-      const areaVal = document.getElementById('all-area-select').value;
-      const sortVal = document.getElementById('all-sort-select').value;
+      const searchVal = document.getElementById('all-search-input')?.value.toLowerCase().trim() || '';
+      const catVal = document.getElementById('all-category-select')?.value || 'All';
+      const areaVal = document.getElementById('all-area-select')?.value || 'all';
+      const sortVal = document.getElementById('all-sort-select')?.value || 'newest';
 
       const grid = document.getElementById('all-products-grid');
       const countEl = document.getElementById('results-count');
+      const loadMoreContainer = document.getElementById('load-more-container');
 
-      if (Rentiwa.isListingsLoading) {
+      if (isFetchingListings && loadedProducts.length === 0) {
         if (grid) {
           grid.innerHTML = `
             <div style="grid-column: 1/-1; text-align:center; padding:60px 20px; background:var(--bg-secondary); border-radius:var(--radius-lg);">
@@ -185,18 +256,16 @@
             </div>
           `;
         }
+        if (loadMoreContainer) loadMoreContainer.style.display = 'none';
         return;
       }
 
-      let allProducts = Rentiwa.getProducts();
-      const favs = Rentiwa.getFavorites();
-
       // Filter logic
-      let filtered = allProducts.filter(p => {
+      let filtered = loadedProducts.filter(p => {
         const pCat = p.category || '';
         const pSelCat = p.selectedCategory || '';
         const matchesCat = (catVal === 'All' || pCat === catVal || (catVal === 'Other' && pSelCat === 'Other'));
-        const matchesSearch = (!searchVal || p.title.toLowerCase().includes(searchVal) || p.description.toLowerCase().includes(searchVal) || pCat.toLowerCase().includes(searchVal) || (p.area && p.area.toLowerCase().includes(searchVal)));
+        const matchesSearch = (!searchVal || (p.title && p.title.toLowerCase().includes(searchVal)) || (p.description && p.description.toLowerCase().includes(searchVal)) || pCat.toLowerCase().includes(searchVal) || (p.area && p.area.toLowerCase().includes(searchVal)));
         const matchesArea = (areaVal === 'all' || (p.area && p.area.toLowerCase().includes(areaVal.toLowerCase())) || (p.location && p.location.toLowerCase().includes(areaVal.toLowerCase())));
         return matchesCat && matchesSearch && matchesArea;
       });
@@ -204,14 +273,14 @@
       // Sort logic
       if (sortVal === 'low-to-high') {
         filtered.sort((a, b) => {
-          const priceA = a.priceDay || a.priceHour || 0;
-          const priceB = b.priceDay || b.priceHour || 0;
+          const priceA = a.priceDay || a.priceHour || a.price || 0;
+          const priceB = b.priceDay || b.priceHour || b.price || 0;
           return priceA - priceB;
         });
       } else if (sortVal === 'high-to-low') {
         filtered.sort((a, b) => {
-          const priceA = a.priceDay || a.priceHour || 0;
-          const priceB = b.priceDay || b.priceHour || 0;
+          const priceA = a.priceDay || a.priceHour || a.price || 0;
+          const priceB = b.priceDay || b.priceHour || b.price || 0;
           return priceB - priceA;
         });
       } else if (sortVal === 'rating') {
@@ -221,27 +290,36 @@
       if (countEl) countEl.innerText = filtered.length;
 
       if (filtered.length === 0) {
-        grid.innerHTML = `
-          <div style="grid-column: 1/-1; text-align:center; padding:60px 20px; background:var(--bg-secondary); border-radius:var(--radius-lg);">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--text-light); margin-bottom:12px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            <h3 class="heading-sm" style="margin-bottom:6px;">No products match your search</h3>
-            <p style="font-size:0.95rem; color:var(--text-muted); margin-bottom:16px;">
-              Try adjusting your search criteria or explore other categories.
-            </p>
-            <button onclick="resetFilters()" class="btn btn-primary btn-sm">
-              Clear Filters
-            </button>
-          </div>
-        `;
+        if (grid) {
+          grid.innerHTML = `
+            <div style="grid-column: 1/-1; text-align:center; padding:60px 20px; background:var(--bg-secondary); border-radius:var(--radius-lg);">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--text-light); margin-bottom:12px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <h3 class="heading-sm" style="margin-bottom:6px;">No products match your search</h3>
+              <p style="font-size:0.95rem; color:var(--text-muted); margin-bottom:16px;">
+                Try adjusting your search criteria or explore other categories.
+              </p>
+              <button onclick="resetFilters()" class="btn btn-primary btn-sm">
+                Clear Filters
+              </button>
+            </div>
+          `;
+        }
+        if (loadMoreContainer) loadMoreContainer.style.display = hasMoreListings ? 'block' : 'none';
         return;
       }
 
-      grid.innerHTML = filtered.map(p => {
-        return Rentiwa.renderProductCardHTML(p, {
-          onFavToggle: 'applyFilters()',
-          onDeleteCallback: 'applyFilters'
-        });
-      }).join('');
+      if (grid) {
+        grid.innerHTML = filtered.map(p => {
+          return Rentiwa.renderProductCardHTML(p, {
+            onFavToggle: 'applyFilters()',
+            onDeleteCallback: 'applyFilters'
+          });
+        }).join('');
+      }
+
+      if (loadMoreContainer) {
+        loadMoreContainer.style.display = hasMoreListings ? 'block' : 'none';
+      }
     }
 
     function resetFilters() {
