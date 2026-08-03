@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Promote Your Product - RENTIWA Narela</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5273660063391722" crossorigin="anonymous"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    .promote-hero {
+      background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+      color: #FFFFFF;
+      padding: 60px 20px;
+      border-radius: var(--radius-2xl, 24px);
+      text-align: center;
+      margin-bottom: 40px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
+    }
+    .promote-hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      background: rgba(255, 85, 0, 0.2);
+      border: 1px solid rgba(255, 85, 0, 0.4);
+      border-radius: 999px;
+      color: #FF7733;
+      font-size: 0.85rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+    .promote-hero h1 {
+      font-family: var(--font-heading);
+      font-size: 2.6rem;
+      font-weight: 800;
+      margin: 0 0 12px 0;
+      letter-spacing: -0.5px;
+    }
+    .promote-hero p {
+      color: #94A3B8;
+      font-size: 1.1rem;
+      max-width: 650px;
+      margin: 0 auto 28px auto;
+      line-height: 1.6;
+    }
+    .promote-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+      margin-bottom: 48px;
+    }
+    .plan-card {
+      background: #FFFFFF;
+      border: 2px solid #E2E8F0;
+      border-radius: 20px;
+      padding: 32px 24px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    .plan-card:hover {
+      border-color: var(--primary, #FF5500);
+      transform: translateY(-6px);
+      box-shadow: 0 16px 32px rgba(255, 85, 0, 0.12);
+    }
+    .plan-card.popular {
+      border-color: var(--primary, #FF5500);
+      background: linear-gradient(180deg, #FFFBF7 0%, #FFFFFF 100%);
+      box-shadow: 0 10px 25px rgba(255, 85, 0, 0.1);
+    }
+    .popular-tag {
+      position: absolute;
+      top: -14px;
+      right: 24px;
+      background: linear-gradient(135deg, #FF5500 0%, #D97706 100%);
+      color: #FFFFFF;
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .plan-title {
+      font-family: var(--font-heading);
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: #0F172A;
+      margin: 0 0 8px 0;
+    }
+    .plan-price {
+      font-family: var(--font-heading);
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--primary, #FF5500);
+      margin-bottom: 16px;
+    }
+    .plan-price span {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #64748B;
+    }
+    .plan-features {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 24px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      flex: 1;
+    }
+    .plan-features li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.92rem;
+      color: #334155;
+      font-weight: 500;
+    }
+    .benefit-box {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 16px;
+      padding: 24px;
+      text-align: center;
+    }
+    .benefit-icon {
+      font-size: 2rem;
+      margin-bottom: 12px;
+    }
+    .faq-accordion {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .faq-item {
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .faq-question {
+      padding: 18px 20px;
+      font-weight: 700;
+      font-size: 1rem;
+      color: #0F172A;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      user-select: none;
+    }
+    .faq-answer {
+      padding: 0 20px 18px 20px;
+      font-size: 0.92rem;
+      color: #475569;
+      line-height: 1.6;
+      display: none;
+    }
+    .faq-item.active .faq-answer {
+      display: block;
+    }
+    .faq-item.active .faq-toggle {
+      transform: rotate(180deg);
+    }
+    .faq-toggle {
+      transition: transform 0.2s;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="navbar-container"></div>
+
+  <main class="container" style="padding-top:28px; padding-bottom:60px;">
+    
+    <!-- HERO HEADER -->
+    <div class="promote-hero">
+      <div class="promote-hero-badge">⭐ RENTIWA PROMOTIONS</div>
+      <h1>Promote Your Products & Rent Faster</h1>
+      <p>
+        Get maximum exposure on the Rentiwa homepage. Feature your products at the top of Narela's rental marketplace and reach hundreds of local renters daily.
+      </p>
+      <button onclick="scrollToPlans()" class="btn btn-primary btn-lg" style="background:linear-gradient(135deg, #FF5500 0%, #D97706 100%); border:none; padding:14px 32px; font-weight:800;">
+        🚀 View Promotion Plans
+      </button>
+    </div>
+
+    <!-- WHY PROMOTE SECTION -->
+    <div style="text-align:center; margin-bottom:36px;">
+      <h2 style="font-family:var(--font-heading); font-size:1.8rem; font-weight:800; color:#0F172A;">
+        Why Feature Your Product on Rentiwa?
+      </h2>
+      <p style="color:#64748B; font-size:1rem; max-width:600px; margin:6px auto 0 auto;">
+        Supercharge your rental income with high-visibility placement.
+      </p>
+    </div>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:20px; margin-bottom:56px;">
+      <div class="benefit-box">
+        <div class="benefit-icon">👑</div>
+        <h3 style="font-weight:800; font-size:1.1rem; color:#0F172A; margin:0 0 8px 0;">Top Homepage Placement</h3>
+        <p style="font-size:0.88rem; color:#64748B; margin:0; line-height:1.5;">
+          Your listing appears directly in the prime ⭐ Featured Listings carousel on the homepage before standard listings.
+        </p>
+      </div>
+
+      <div class="benefit-box">
+        <div class="benefit-icon">⚡</div>
+        <h3 style="font-weight:800; font-size:1.1rem; color:#0F172A; margin:0 0 8px 0;">10x More Views & Enquiries</h3>
+        <p style="font-size:0.88rem; color:#64748B; margin:0; line-height:1.5;">
+          Featured items receive significantly more clicks, direct phone calls, and WhatsApp messages from local renters.
+        </p>
+      </div>
+
+      <div class="benefit-box">
+        <div class="benefit-icon">🏷️</div>
+        <h3 style="font-weight:800; font-size:1.1rem; color:#0F172A; margin:0 0 8px 0;">Exclusive ⭐ Featured Badge</h3>
+        <p style="font-size:0.88rem; color:#64748B; margin:0; line-height:1.5;">
+          Stand out with a gradient featured badge that builds trust and highlights your listing quality.
+        </p>
+      </div>
+    </div>
+
+    <!-- PRICING PLANS SECTION -->
+    <div id="plans-section" style="text-align:center; margin-bottom:32px;">
+      <div style="color:var(--primary, #FF5500); font-weight:800; text-transform:uppercase; font-size:0.82rem; letter-spacing:1px; margin-bottom:4px;">
+        AFFORDABLE & TRANSPARENT PRICING
+      </div>
+      <h2 style="font-family:var(--font-heading); font-size:2rem; font-weight:800; color:#0F172A;">
+        Choose Your Promotion Plan
+      </h2>
+      <p style="color:#64748B; font-size:1rem; margin-top:6px;">
+        Select a plan to request promotion for any of your active listings.
+      </p>
+    </div>
+
+    <div class="promote-cards-grid">
+      <!-- PLAN 1 -->
+      <div class="plan-card">
+        <div class="plan-title">⭐ Featured Listing</div>
+        <div class="plan-price">₹49 <span>/ 24 Hours</span></div>
+        <ul class="plan-features">
+          <li>✅ Homepage ⭐ Featured Carousel placement</li>
+          <li>✅ 24 Hours active promotion</li>
+          <li>✅ Exclusive ⭐ Featured badge</li>
+          <li>✅ Max 5 products per request</li>
+          <li>✅ Direct WhatsApp & phone contact</li>
+        </ul>
+        <button onclick="requestPromotionFromPlan('⭐ Featured Listing (₹49 / 24 Hours)')" class="btn btn-outline btn-full" style="border-color:var(--primary); color:var(--primary-dark); font-weight:700;">
+          Select Plan
+        </button>
+      </div>
+
+      <!-- PLAN 2 (POPULAR) -->
+      <div class="plan-card popular">
+        <div class="popular-tag">MOST POPULAR</div>
+        <div class="plan-title">🚀 Featured Plus</div>
+        <div class="plan-price">₹149 <span>/ 5 Days</span></div>
+        <ul class="plan-features">
+          <li>✅ Homepage ⭐ Featured Carousel placement</li>
+          <li>✅ 5 Full Days active promotion</li>
+          <li>✅ High priority carousel position</li>
+          <li>✅ Exclusive ⭐ Featured badge</li>
+          <li>✅ Max 5 products per request</li>
+          <li>✅ Admin priority review & support</li>
+        </ul>
+        <button onclick="requestPromotionFromPlan('🚀 Featured Plus (₹149 / 5 Days)')" class="btn btn-primary btn-full" style="background:linear-gradient(135deg, #FF5500 0%, #D97706 100%); border:none; font-weight:800;">
+          Select Plan
+        </button>
+      </div>
+
+      <!-- PLAN 3 -->
+      <div class="plan-card">
+        <div class="plan-title">👑 Business Spotlight</div>
+        <div class="plan-price">₹499 <span>/ 30 Days</span></div>
+        <ul class="plan-features">
+          <li>✅ Homepage ⭐ Featured Carousel placement</li>
+          <li>✅ 30 Full Days active promotion</li>
+          <li>✅ Maximum visibility in Narela</li>
+          <li>✅ Exclusive ⭐ Featured badge</li>
+          <li>✅ Max 10 products per request</li>
+          <li>✅ Dedicated Account Manager support</li>
+        </ul>
+        <button onclick="requestPromotionFromPlan('👑 Business Spotlight (₹499 / 30 Days)')" class="btn btn-outline btn-full" style="border-color:var(--primary); color:var(--primary-dark); font-weight:700;">
+          Select Plan
+        </button>
+      </div>
+    </div>
+
+    <!-- DIRECT USER LISTINGS SELECTOR -->
+    <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:20px; padding:32px; margin-bottom:56px; box-shadow:0 8px 24px rgba(15,23,42,0.04);">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+        <div style="width:40px; height:40px; background:#FF550015; color:#FF5500; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.3rem; font-weight:800;">
+          🚀
+        </div>
+        <div>
+          <h3 style="font-family:var(--font-heading); font-size:1.3rem; font-weight:800; color:#0F172A; margin:0;">
+            Promote Your Product Directly
+          </h3>
+          <p style="font-size:0.88rem; color:#64748B; margin:2px 0 0 0;">
+            Select one of your active listings to request promotion right now.
+          </p>
+        </div>
+      </div>
+
+      <div id="promote-my-products-container" style="margin-top:20px;">
+        <p style="color:#64748B;">Checking your listings...</p>
+      </div>
+    </div>
+
+    <!-- HOW APPROVAL WORKS -->
+    <div style="background:linear-gradient(135deg, #F8FAFC 0%, #EDF2F7 100%); border-radius:20px; padding:36px 24px; margin-bottom:56px;">
+      <div style="text-align:center; margin-bottom:32px;">
+        <h2 style="font-family:var(--font-heading); font-size:1.6rem; font-weight:800; color:#0F172A; margin:0;">
+          How Approval Works
+        </h2>
+        <p style="color:#64748B; font-size:0.95rem; margin-top:4px;">
+          Fast and simple 3-step verification process
+        </p>
+      </div>
+
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:24px;">
+        <div style="background:#fff; padding:20px; border-radius:14px; border:1px solid #E2E8F0;">
+          <div style="font-weight:800; color:#FF5500; font-size:1.2rem; margin-bottom:6px;">1. Submit Request</div>
+          <p style="font-size:0.88rem; color:#475569; margin:0; line-height:1.5;">
+            Choose your product and select your desired promotion plan above.
+          </p>
+        </div>
+
+        <div style="background:#fff; padding:20px; border-radius:14px; border:1px solid #E2E8F0;">
+          <div style="font-weight:800; color:#FF5500; font-size:1.2rem; margin-bottom:6px;">2. Admin Verification</div>
+          <p style="font-size:0.88rem; color:#475569; margin:0; line-height:1.5;">
+            Our team verifies the product quality and confirms payment via WhatsApp or Phone.
+          </p>
+        </div>
+
+        <div style="background:#fff; padding:20px; border-radius:14px; border:1px solid #E2E8F0;">
+          <div style="font-weight:800; color:#16A34A; font-size:1.2rem; margin-bottom:6px;">3. Instant Feature</div>
+          <p style="font-size:0.88rem; color:#475569; margin:0; line-height:1.5;">
+            Once approved, your product goes live on the ⭐ Featured Listings carousel!
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- FREQUENTLY ASKED QUESTIONS -->
+    <div style="margin-bottom:56px;">
+      <div style="text-align:center; margin-bottom:32px;">
+        <h2 style="font-family:var(--font-heading); font-size:1.6rem; font-weight:800; color:#0F172A; margin:0;">
+          Frequently Asked Questions
+        </h2>
+        <p style="color:#64748B; font-size:0.95rem; margin-top:4px;">
+          Everything you need to know about Rentiwa Featured Promotions
+        </p>
+      </div>
+
+      <div class="faq-accordion">
+        <div class="faq-item">
+          <div class="faq-question" onclick="toggleFaq(this)">
+            <span>What are Featured Listings on Rentiwa?</span>
+            <span class="faq-toggle">▼</span>
+          </div>
+          <div class="faq-answer">
+            Featured Listings are high-visibility product cards displayed in the top ⭐ Featured Listings carousel on the Rentiwa homepage. They receive priority exposure over regular listings to attract more local renters in Narela.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question" onclick="toggleFaq(this)">
+            <span>Can I feature my product directly without admin approval?</span>
+            <span class="faq-toggle">▼</span>
+          </div>
+          <div class="faq-answer">
+            No. To maintain high quality and trust across Rentiwa, every promotion request is carefully reviewed by the administrator before going live.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question" onclick="toggleFaq(this)">
+            <span>How do I pay for promotion?</span>
+            <span class="faq-toggle">▼</span>
+          </div>
+          <div class="faq-answer">
+            Once you submit a promotion request, the Rentiwa admin will reach out via WhatsApp (+91 8510823577) or Phone to provide UPI payment options (UPI, Paytm, PhonePe, Google Pay).
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question" onclick="toggleFaq(this)">
+            <span>How long does approval take?</span>
+            <span class="faq-toggle">▼</span>
+          </div>
+          <div class="faq-answer">
+            Most promotion requests are reviewed and approved within 15 to 30 minutes during business hours.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question" onclick="toggleFaq(this)">
+            <span>What happens when my promotion expires?</span>
+            <span class="faq-toggle">▼</span>
+          </div>
+          <div class="faq-answer">
+            When the promotion duration ends (e.g. 24 hours, 5 days, or 30 days), your item automatically reverts to a standard listing without losing its reviews or details. You can request renewal anytime!
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTACT BANNER -->
+    <div style="background:#FFF7ED; border:2px dashed #FDBA74; border-radius:20px; padding:32px; text-align:center;">
+      <h3 style="font-family:var(--font-heading); font-size:1.4rem; font-weight:800; color:#9A3412; margin:0 0 8px 0;">
+        Have Questions or Need Custom Business Promotions?
+      </h3>
+      <p style="color:#7C2D12; font-size:0.95rem; margin-bottom:20px;">
+        Reach out directly to the Rentiwa team for custom advertising packages and assistance.
+      </p>
+      <div style="display:flex; justify-content:center; gap:16px; flex-wrap:wrap;">
+        <a href="https://wa.me/918510823577" target="_blank" rel="noopener" class="btn btn-primary" style="background:#25D366; border:none; font-weight:800; display:inline-flex; align-items:center; gap:8px;">
+          WhatsApp: +91 8510823577
+        </a>
+        <a href="tel:+918800516171" class="btn btn-outline" style="border-color:#9A3412; color:#9A3412; font-weight:800;">
+          Call: +91 8800516171
+        </a>
+        <a href="mailto:teamrentiwa@gmail.com" class="btn btn-outline" style="border-color:#9A3412; color:#9A3412; font-weight:800;">
+          Email: teamrentiwa@gmail.com
+        </a>
+      </div>
+    </div>
+
+  </main>
+
+  <div id="footer-container"></div>
+
+  <script type="module" src="/js/app.js"></script>
+  <script>
+    function scrollToPlans() {
+      document.getElementById('plans-section').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function toggleFaq(el) {
+      const item = el.closest('.faq-item');
+      item.classList.toggle('active');
+    }
+
+    function requestPromotionFromPlan(planName) {
+      const user = Rentiwa.getUser();
+      if (!user) {
+        Rentiwa.openLoginModal();
+        return;
+      }
+
+      const products = Rentiwa.getProducts().filter(p => p.ownerId === user.uid || p.ownerUid === user.uid);
+      if (!products || products.length === 0) {
+        Rentiwa.showToast("You don't have any active listings yet. Please add a listing first!", "warning");
+        setTimeout(() => {
+          window.location.href = '/pages/add-listing.html';
+        }, 1500);
+        return;
+      }
+
+      // Open promote modal for first listing or ask user to select below
+      Rentiwa.openPromoteModal(products[0].id);
+    }
+
+    function renderUserListingsForPromotion() {
+      const container = document.getElementById('promote-my-products-container');
+      if (!container) return;
+
+      const user = Rentiwa.getUser();
+      if (!user) {
+        container.innerHTML = `
+          <div style="text-align:center; padding:24px; background:#F8FAFC; border-radius:12px;">
+            <p style="color:#64748B; margin-bottom:12px;">Please log in to view and promote your active product listings.</p>
+            <button onclick="Rentiwa.loginWithGoogle()" class="btn btn-primary btn-sm">🔑 Login with Google</button>
+          </div>
+        `;
+        return;
+      }
+
+      const allProducts = Rentiwa.getProducts();
+      const userProducts = allProducts.filter(p => p.ownerId === user.uid || p.ownerUid === user.uid);
+
+      if (userProducts.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center; padding:24px; background:#F8FAFC; border-radius:12px;">
+            <p style="color:#64748B; margin-bottom:12px;">You haven't added any products yet.</p>
+            <a href="/pages/add-listing.html" class="btn btn-primary btn-sm">+ List Your Product Now</a>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = `
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:16px;">
+          ${userProducts.map(p => `
+            <div style="background:#fff; border:1px solid #E2E8F0; border-radius:12px; padding:12px; display:flex; align-items:center; gap:12px;">
+              <img src="${(p.images && p.images[0]) || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=150&q=80'}" style="width:50px; height:50px; border-radius:8px; object-fit:cover;">
+              <div style="min-width:0; flex:1;">
+                <div style="font-weight:700; font-size:0.9rem; color:#0F172A; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.title}</div>
+                <div style="font-size:0.78rem; color:#64748B;">₹${p.price} / day</div>
+              </div>
+              <button onclick="Rentiwa.openPromoteModal('${p.id}')" class="btn btn-primary btn-sm" style="background:linear-gradient(135deg, #FF5500 0%, #D97706 100%); border:none; padding:6px 10px; font-size:0.75rem; font-weight:800;">
+                🚀 Promote
+              </button>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        renderUserListingsForPromotion();
+      }, 500);
+
+      window.onRentiwaAuthUpdate = () => {
+        renderUserListingsForPromotion();
+      };
+    });
+  </script>
+</body>
+</html>

@@ -30,7 +30,16 @@ import {
   adminApproveUpgradeRequest,
   adminRejectUpgradeRequest,
   adminGetSettings,
-  adminSaveSettings
+  adminSaveSettings,
+  submitPromotionRequestToFirestore,
+  fetchActiveFeaturedListingsFromFirestore,
+  adminFetchPromotionRequests,
+  adminFetchFeaturedListings,
+  adminApprovePromotionRequest,
+  adminRejectPromotionRequest,
+  adminCreateFeaturedListing,
+  adminUpdateFeaturedListing,
+  adminDeleteFeaturedListing
 } from '/src/firebase.ts';
 
 // Global State Manager
@@ -111,6 +120,7 @@ const Rentiwa = {
     this.renderHeaderAndFooter();
     this.bindGlobalEvents();
     this.fetchListings();
+    this.initFeaturedCarousel();
   },
 
   setupSnapshotListener() {
@@ -682,6 +692,9 @@ const Rentiwa = {
                 <span class="share-btn-label">Share</span>
               </button>
               ${isMyItem ? `
+                <button type="button" onclick="Rentiwa.openPromoteModal('${p.id}', event);" class="btn btn-primary btn-sm" style="background:linear-gradient(135deg, #FF5500 0%, #D97706 100%); color:#fff; border:none; padding:5px 8px; font-weight:700; font-size:0.75rem;" title="Promote This Product">
+                  🚀 Promote
+                </button>
                 <button type="button" onclick="Rentiwa.openEditListingModal('${p.id}');" class="btn btn-outline btn-sm" style="color:var(--primary-dark); border-color:var(--primary); padding:5px 8px;" title="Edit Listing">
                   ✏️
                 </button>
@@ -1027,6 +1040,7 @@ const Rentiwa = {
             <ul class="nav-menu" id="nav-menu-list">
               <li><a href="/" class="nav-link ${window.location.pathname === '/' || window.location.pathname.endsWith('index.html') ? 'active' : ''}">Home</a></li>
               <li><a href="/pages/all-listings.html" class="nav-link ${window.location.pathname.includes('all-listings') ? 'active' : ''}">All Listings</a></li>
+              <li><a href="/pages/promote.html" class="nav-link ${window.location.pathname.includes('promote') ? 'active' : ''}">Promote</a></li>
               <li class="mobile-only-nav-item"><a href="/pages/add-listing.html" class="nav-link">+ List Item</a></li>
               ${currentUser ? `
                 <li class="mobile-only-nav-item"><a href="/pages/profile.html" class="nav-link">My Profile & Listings</a></li>
@@ -1456,6 +1470,314 @@ const Rentiwa = {
   adminRejectUpgradeRequest,
   adminGetSettings,
   adminSaveSettings,
+  submitPromotionRequestToFirestore,
+  fetchActiveFeaturedListingsFromFirestore,
+  adminFetchPromotionRequests,
+  adminFetchFeaturedListings,
+  adminApprovePromotionRequest,
+  adminRejectPromotionRequest,
+  adminCreateFeaturedListing,
+  adminUpdateFeaturedListing,
+  adminDeleteFeaturedListing,
+
+  /* ====================================================
+     FEATURED PROMOTIONS SYSTEM METHODS
+     ==================================================== */
+  openPromoteModal(productId, event) {
+    if (event) event.stopPropagation();
+
+    const user = this.getUser();
+    if (!user) {
+      this.openLoginModal();
+      return;
+    }
+
+    const product = this.getProductById(productId);
+    if (!product) {
+      this.showToast("Product not found.", "error");
+      return;
+    }
+
+    let overlay = document.getElementById('promote-modal-overlay');
+    if (overlay) overlay.remove();
+
+    overlay = document.createElement('div');
+    overlay.id = 'promote-modal-overlay';
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal-card" style="max-width:540px;">
+        <button class="modal-close" onclick="Rentiwa.closeModal('promote-modal-overlay')">✕</button>
+        
+        <div style="text-align:center; margin-bottom:20px;">
+          <div style="display:inline-flex; align-items:center; justify-content:center; width:54px; height:54px; background:linear-gradient(135deg, #FF5500 0%, #D97706 100%); color:#fff; border-radius:50%; font-size:1.6rem; margin-bottom:12px; box-shadow:0 6px 18px rgba(255,85,0,0.3);">
+            ⭐
+          </div>
+          <h2 class="heading-md" style="margin:0; font-size:1.4rem;">Promote this Product</h2>
+          <p class="subheading" style="font-size:0.88rem; margin-top:6px; color:var(--text-muted); line-height:1.5;">
+            Your request will be reviewed by the Rentiwa team. Once approved and payment is confirmed, your product may appear in Featured Listings.
+          </p>
+        </div>
+
+        <!-- Selected Item Preview -->
+        <div style="display:flex; align-items:center; gap:12px; background:#F8FAFC; padding:12px 16px; border-radius:12px; border:1px solid #E2E8F0; margin-bottom:20px;">
+          <img src="${(product.images && product.images[0]) || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=300&q=80'}" style="width:52px; height:52px; border-radius:8px; object-fit:cover; flex-shrink:0;">
+          <div style="min-width:0; flex:1;">
+            <div style="font-weight:700; font-size:0.95rem; color:#0F172A; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              ${product.title || product.productName}
+            </div>
+            <div style="font-size:0.8rem; color:#64748B; margin-top:2px;">
+              ₹${product.price} / ${product.pricingType === 'hour' ? 'hour' : 'day'} • ${product.location || 'Narela, Delhi'}
+            </div>
+          </div>
+        </div>
+
+        <!-- Plan Selection Form -->
+        <form id="promote-request-form" onsubmit="event.preventDefault(); Rentiwa.submitPromotionRequest('${product.id}');">
+          <div style="margin-bottom:18px;">
+            <label style="display:block; font-size:0.82rem; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; color:#0F172A;">
+              Select Promotion Plan *
+            </label>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              <label style="display:flex; align-items:center; gap:12px; padding:12px 14px; border:2px solid #E2E8F0; border-radius:10px; cursor:pointer; transition:all 0.2s; background:#fff;">
+                <input type="radio" name="promote_plan" value="⭐ Featured Listing (₹49 / 24 Hours)" checked style="accent-color:#FF5500;">
+                <div style="flex:1;">
+                  <div style="font-weight:700; font-size:0.9rem; color:#0F172A;">⭐ Featured Listing</div>
+                  <div style="font-size:0.78rem; color:#64748B;">₹49 for 24 Hours • Homepage Carousel</div>
+                </div>
+                <div style="font-weight:800; color:#FF5500; font-size:0.95rem;">₹49</div>
+              </label>
+
+              <label style="display:flex; align-items:center; gap:12px; padding:12px 14px; border:2px solid #E2E8F0; border-radius:10px; cursor:pointer; transition:all 0.2s; background:#fff;">
+                <input type="radio" name="promote_plan" value="🚀 Featured Plus (₹149 / 5 Days)" style="accent-color:#FF5500;">
+                <div style="flex:1;">
+                  <div style="font-weight:700; font-size:0.9rem; color:#0F172A;">🚀 Featured Plus</div>
+                  <div style="font-size:0.78rem; color:#64748B;">₹149 for 5 Days • High Visibility</div>
+                </div>
+                <div style="font-weight:800; color:#FF5500; font-size:0.95rem;">₹149</div>
+              </label>
+
+              <label style="display:flex; align-items:center; gap:12px; padding:12px 14px; border:2px solid #E2E8F0; border-radius:10px; cursor:pointer; transition:all 0.2s; background:#fff;">
+                <input type="radio" name="promote_plan" value="👑 Business Spotlight (₹499 / 30 Days)" style="accent-color:#FF5500;">
+                <div style="flex:1;">
+                  <div style="font-weight:700; font-size:0.9rem; color:#0F172A;">👑 Business Spotlight</div>
+                  <div style="font-size:0.78rem; color:#64748B;">₹499 for 30 Days • Maximum Exposure</div>
+                </div>
+                <div style="font-weight:800; color:#FF5500; font-size:0.95rem;">₹499</div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Direct Contact Section -->
+          <div style="background:#FFF7ED; border:1px dashed #FDBA74; padding:12px 16px; border-radius:10px; margin-bottom:20px;">
+            <div style="font-weight:700; font-size:0.82rem; color:#9A3412; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
+              Direct Rentiwa Admin Contact:
+            </div>
+            <div style="font-size:0.85rem; color:#7C2D12; display:flex; flex-direction:column; gap:4px;">
+              <div>📞 <strong>Phone / WhatsApp:</strong> +91 8510823577, +91 8800516171</div>
+              <div>✉️ <strong>Email:</strong> teamrentiwa@gmail.com</div>
+            </div>
+          </div>
+
+          <!-- Modal Action Buttons -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+            <a href="https://wa.me/918510823577?text=Hello%20Rentiwa%20Team%2C%20I%20want%20to%20promote%20my%20product%3A%20${encodeURIComponent(product.title)}" target="_blank" rel="noopener" class="btn btn-outline" style="background:#25D366; color:#fff; border-color:#25D366; justify-content:center; gap:6px; font-weight:700; text-decoration:none; padding:10px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.52 15.22L2 22l4.91-1.42A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.14-1.15l-.3-.18-2.91.84.85-2.82-.2-.32A8 8 0 1 1 12 20zm4.43-5.83c-.24-.12-1.44-.71-1.66-.79s-.39-.12-.55.12-.63.79-.78.95-.29.18-.54.06a6.83 6.83 0 0 1-2-1.23 7.54 7.54 0 0 1-1.39-1.73c-.15-.25 0-.38.12-.5s.24-.29.36-.44a1.64 1.64 0 0 0 .24-.4.44.44 0 0 0 0-.42c0-.12-.55-1.33-.76-1.82s-.41-.41-.55-.42h-.47a.9.9 0 0 0-.66.31 2.76 2.76 0 0 0-.86 2.05 4.8 4.8 0 0 0 1 2.54 11 11 0 0 0 4.22 3.73c1.39.6 1.95.67 2.65.57a2.26 2.26 0 0 0 1.5-.1.5 1.83 1.83 0 0 0 .12-1.25c-.07-.12-.24-.19-.48-.31z"/></svg>
+              WhatsApp
+            </a>
+            <a href="tel:+918510823577" class="btn btn-outline" style="justify-content:center; gap:6px; font-weight:700; text-decoration:none; padding:10px;">
+              📞 Call Now
+            </a>
+          </div>
+
+          <button type="submit" id="btn-submit-promote-req" class="btn btn-primary btn-full btn-lg" style="background:linear-gradient(135deg, #FF5500 0%, #D97706 100%); border:none; margin-top:6px;">
+            🚀 Submit Promotion Request
+          </button>
+        </form>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+    setTimeout(() => overlay.classList.add('active'), 10);
+  },
+
+  async submitPromotionRequest(productId) {
+    const user = this.getUser();
+    if (!user) {
+      this.openLoginModal();
+      return;
+    }
+
+    const product = this.getProductById(productId);
+    if (!product) {
+      this.showToast("Product not found.", "error");
+      return;
+    }
+
+    const form = document.getElementById('promote-request-form');
+    const selectedPlanEl = form ? form.querySelector('input[name="promote_plan"]:checked') : null;
+    const planRequested = selectedPlanEl ? selectedPlanEl.value : '⭐ Featured Listing (₹49 / 24 Hours)';
+
+    const btn = document.getElementById('btn-submit-promote-req');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = `<span style="display:inline-flex; align-items:center; gap:8px;">Sending Request...</span>`;
+    }
+
+    try {
+      await submitPromotionRequestToFirestore({
+        productId: product.id,
+        productName: product.title || product.productName,
+        productImage: (product.images && product.images[0]) || '',
+        planRequested,
+        phone: user.phone || '',
+        email: user.email || '',
+        ownerName: user.name || 'Verified Member'
+      });
+
+      this.closeModal('promote-modal-overlay');
+      this.showToast('🚀 Promotion request submitted! Admin will contact you soon.', 'success');
+    } catch (err) {
+      console.error("Submit promotion request error:", err);
+      this.showToast(err.message || "Failed to submit request.", "error");
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = `🚀 Submit Promotion Request`;
+      }
+    }
+  },
+
+  async initFeaturedCarousel() {
+    const container = document.getElementById('featured-carousel-container');
+    if (!container) return;
+
+    try {
+      const activeListings = await fetchActiveFeaturedListingsFromFirestore();
+      
+      // Randomize on page load
+      activeListings.sort(() => Math.random() - 0.5);
+
+      if (!activeListings || activeListings.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center; padding:36px 20px; background:#F8FAFC; border:1px dashed #CBD5E1; border-radius:16px;">
+            <div style="font-size:2rem; margin-bottom:8px;">⭐</div>
+            <h3 style="font-family:var(--font-heading); font-weight:800; font-size:1.15rem; color:#0F172A; margin:0;">
+              No Featured Listings Available Yet.
+            </h3>
+            <p style="font-size:0.88rem; color:#64748B; margin-top:6px; margin-bottom:16px;">
+              Promote your product to be featured right here on the Rentiwa homepage!
+            </p>
+            <a href="/pages/promote.html" class="btn btn-primary btn-sm" style="display:inline-flex; align-items:center; gap:6px;">
+              🚀 Learn How to Promote
+            </a>
+          </div>
+        `;
+        return;
+      }
+
+      // Build Carousel DOM
+      const cardMarkup = activeListings.map(item => `
+        <div class="featured-card-item" onclick="window.location.href='/pages/listing.html?id=${item.productId || item.id}'" style="flex:0 0 280px; max-width:280px; cursor:pointer; background:#fff; border-radius:16px; border:1px solid #E2E8F0; overflow:hidden; box-shadow:0 4px 14px rgba(15,23,42,0.06); transition:transform 0.3s, box-shadow 0.3s; position:relative;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 24px rgba(255,85,0,0.15)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 14px rgba(15,23,42,0.06)';">
+          
+          <div style="position:relative; width:100%; height:180px; background:#F1F5F9; overflow:hidden;">
+            <img src="${item.image || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=600&q=80'}" alt="${item.title}" loading="lazy" style="width:100%; height:100%; object-fit:cover;">
+            <div style="position:absolute; top:10px; left:10px; background:linear-gradient(135deg, #FF5500 0%, #D97706 100%); color:#fff; padding:4px 10px; border-radius:20px; font-weight:800; font-size:0.75rem; letter-spacing:0.5px; box-shadow:0 2px 8px rgba(0,0,0,0.2); display:flex; align-items:center; gap:4px;">
+              <span>⭐ Featured</span>
+            </div>
+            <div style="position:absolute; bottom:10px; right:10px; background:rgba(15,23,42,0.8); backdrop-filter:blur(4px); color:#fff; padding:3px 8px; border-radius:6px; font-weight:700; font-size:0.75rem;">
+              ${item.category || 'General'}
+            </div>
+          </div>
+
+          <div style="padding:14px; display:flex; flex-direction:column; gap:6px;">
+            <div style="font-weight:800; font-size:0.98rem; color:#0F172A; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              ${item.title}
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-top:4px;">
+              <div style="font-weight:800; color:var(--primary, #FF5500); font-size:1.05rem;">
+                ₹${item.price} <small style="font-size:0.75rem; font-weight:600; color:#64748B;">/day</small>
+              </div>
+              <div style="font-size:0.78rem; color:#64748B; font-weight:600; display:flex; align-items:center; gap:3px;">
+                📍 ${item.location || 'Narela, Delhi'}
+              </div>
+            </div>
+          </div>
+
+        </div>
+      `).join('');
+
+      container.innerHTML = `
+        <div style="position:relative; width:100%;">
+          <!-- Carousel Viewport -->
+          <div id="featured-carousel-viewport" style="display:flex; gap:16px; overflow-x:auto; scroll-behavior:smooth; padding:8px 4px 16px; scrollbar-width:none; -ms-overflow-style:none;">
+            ${cardMarkup}
+          </div>
+
+          <!-- Left Arrow -->
+          <button id="featured-prev-btn" style="position:absolute; left:-14px; top:50%; transform:translateY(-50%); width:38px; height:38px; border-radius:50%; background:#fff; border:1px solid #E2E8F0; box-shadow:0 4px 12px rgba(0,0,0,0.12); cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:10; font-weight:800; color:#0F172A;">
+            ❮
+          </button>
+
+          <!-- Right Arrow -->
+          <button id="featured-next-btn" style="position:absolute; right:-14px; top:50%; transform:translateY(-50%); width:38px; height:38px; border-radius:50%; background:#fff; border:1px solid #E2E8F0; box-shadow:0 4px 12px rgba(0,0,0,0.12); cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:10; font-weight:800; color:#0F172A;">
+            ❯
+          </button>
+        </div>
+      `;
+
+      const viewport = document.getElementById('featured-carousel-viewport');
+      const prevBtn = document.getElementById('featured-prev-btn');
+      const nextBtn = document.getElementById('featured-next-btn');
+
+      if (viewport) {
+        const itemWidth = 296; // 280px + 16px gap
+
+        const scrollNext = () => {
+          if (viewport.scrollLeft + viewport.clientWidth >= viewport.scrollWidth - 10) {
+            viewport.scrollTo({ left: 0, behavior: 'smooth' });
+          } else {
+            viewport.scrollBy({ left: itemWidth, behavior: 'smooth' });
+          }
+        };
+
+        const scrollPrev = () => {
+          if (viewport.scrollLeft <= 10) {
+            viewport.scrollTo({ left: viewport.scrollWidth, behavior: 'smooth' });
+          } else {
+            viewport.scrollBy({ left: -itemWidth, behavior: 'smooth' });
+          }
+        };
+
+        if (prevBtn) prevBtn.addEventListener('click', scrollPrev);
+        if (nextBtn) nextBtn.addEventListener('click', scrollNext);
+
+        // Auto slide every 4 seconds
+        let intervalId = setInterval(scrollNext, 4000);
+
+        viewport.addEventListener('mouseenter', () => clearInterval(intervalId));
+        viewport.addEventListener('mouseleave', () => {
+          clearInterval(intervalId);
+          intervalId = setInterval(scrollNext, 4000);
+        });
+
+        // Touch Swipe Support
+        let startX = 0;
+        viewport.addEventListener('touchstart', (e) => {
+          startX = e.touches[0].clientX;
+          clearInterval(intervalId);
+        }, { passive: true });
+
+        viewport.addEventListener('touchend', (e) => {
+          const endX = e.changedTouches[0].clientX;
+          const diff = startX - endX;
+          if (diff > 40) scrollNext();
+          else if (diff < -40) scrollPrev();
+          intervalId = setInterval(scrollNext, 4000);
+        }, { passive: true });
+      }
+    } catch (err) {
+      console.warn("Error rendering featured carousel:", err);
+    }
+  },
 
   // Global Event Binding
   bindGlobalEvents() {

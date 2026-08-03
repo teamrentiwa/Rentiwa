@@ -698,4 +698,246 @@ export const adminSaveSettings = async (settings: Record<string, any>) => {
   return true;
 };
 
+/* ====================================================
+   FEATURED PROMOTIONS FIRESTORE HELPER FUNCTIONS
+   ==================================================== */
+
+export interface PromotionRequestParams {
+  productId: string;
+  productName: string;
+  productImage?: string;
+  planRequested: string;
+  phone?: string;
+  email?: string;
+  ownerName?: string;
+}
+
+export const submitPromotionRequestToFirestore = async (params: PromotionRequestParams) => {
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    throw new Error("You must be logged in to request promotion.");
+  }
+
+  const reqDoc = {
+    userId: currentUser.uid,
+    productId: params.productId,
+    productName: params.productName,
+    productImage: params.productImage || '',
+    ownerName: params.ownerName || currentUser.displayName || 'Rentiwa User',
+    phone: params.phone || currentUser.phoneNumber || '',
+    email: params.email || currentUser.email || '',
+    planRequested: params.planRequested || '⭐ Featured Listing (₹49 / 24 Hours)',
+    status: 'Pending',
+    requestedAt: serverTimestamp()
+  };
+
+  const docRef = await addDoc(collection(db, "promotionRequests"), reqDoc);
+  return { requestId: docRef.id, id: docRef.id, ...reqDoc };
+};
+
+export const fetchActiveFeaturedListingsFromFirestore = async () => {
+  try {
+    const ref = collection(db, "featuredListings");
+    const q = query(ref, where("status", "==", "Active"));
+    const snapshot = await getDocs(q);
+    const now = Date.now();
+    const activeListings: any[] = [];
+
+    for (const docSnap of snapshot.docs) {
+      const data = docSnap.data();
+      const featuredId = docSnap.id;
+      
+      let endMs = 0;
+      if (data.endDate) {
+        if (typeof data.endDate === 'number') endMs = data.endDate;
+        else if (data.endDate.toMillis) endMs = data.endDate.toMillis();
+        else endMs = new Date(data.endDate).getTime();
+      }
+
+      // If expired, update status to Expired in background
+      if (endMs > 0 && endMs < now) {
+        try {
+          await updateDoc(doc(db, "featuredListings", featuredId), {
+            status: "Expired",
+            updatedAt: serverTimestamp()
+          });
+        } catch (e) {
+          console.warn("Error marking featured listing as expired:", e);
+        }
+      } else {
+        activeListings.push({
+          featuredId,
+          id: featuredId,
+          ...data,
+          createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : (data.createdAt || now)
+        });
+      }
+    }
+    return activeListings;
+  } catch (err) {
+    console.warn("Fetch active featured listings error:", err);
+    return [];
+  }
+};
+
+export const adminFetchPromotionRequests = async () => {
+  try {
+    const ref = collection(db, "promotionRequests");
+    const snapshot = await getDocs(ref);
+    const docs = snapshot.docs.map(docSnap => {
+      const data = docSnap.data();
+      return {
+        requestId: docSnap.id,
+        id: docSnap.id,
+        ...data,
+        requestedAt: data.requestedAt?.toMillis ? data.requestedAt.toMillis() : (data.requestedAt || Date.now())
+      };
+    });
+    docs.sort((a, b) => {
+      const timeA = typeof a.requestedAt === 'number' ? a.requestedAt : 0;
+      const timeB = typeof b.requestedAt === 'number' ? b.requestedAt : 0;
+      return timeB - timeA;
+    });
+    return docs;
+  } catch (err) {
+    console.error("Admin fetch promotion requests error:", err);
+    return [];
+  }
+};
+
+export const adminFetchFeaturedListings = async () => {
+  try {
+    const ref = collection(db, "featuredListings");
+    const snapshot = await getDocs(ref);
+    const now = Date.now();
+    const docs = snapshot.docs.map(docSnap => {
+      const data = docSnap.data();
+      let endMs = 0;
+      if (data.endDate) {
+        if (typeof data.endDate === 'number') endMs = data.endDate;
+        else if (data.endDate.toMillis) endMs = data.endDate.toMillis();
+        else endMs = new Date(data.endDate).getTime();
+      }
+
+      let currentStatus = data.status || 'Active';
+      if (currentStatus === 'Active' && endMs > 0 && endMs < now) {
+        currentStatus = 'Expired';
+      }
+
+      return {
+        featuredId: docSnap.id,
+        id: docSnap.id,
+        ...data,
+        status: currentStatus,
+        createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : (data.createdAt || now)
+      };
+    });
+    docs.sort((a, b) => {
+      const timeA = typeof a.createdAt === 'number' ? a.createdAt : 0;
+      const timeB = typeof b.createdAt === 'number' ? b.createdAt : 0;
+      return timeB - timeA;
+    });
+    return docs;
+  } catch (err) {
+    console.error("Admin fetch featured listings error:", err);
+    return [];
+  }
+};
+
+export interface ApprovePromotionParams {
+  planName: string; // e.g. "Featured Listing", "Featured Plus", "Business Spotlight"
+  durationDays: number; // e.g. 1, 5, 30
+}
+
+export const adminApprovePromotionRequest = async (requestId: string, reqData: any, planParams: ApprovePromotionParams) => {
+  // 1. Update request status
+  const reqRef = doc(db, "promotionRequests", requestId);
+  await updateDoc(reqRef, {
+    status: "Approved",
+    approvedAt: serverTimestamp()
+  });
+
+  // 2. Calculate duration
+  const now = new Date();
+  const days = planParams.durationDays || 1;
+  const endDate = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+
+  // 3. Create featured listing doc
+  const featuredDoc = {
+    productId: reqData.productId,
+    userId: reqData.userId || '',
+    title: reqData.productName || reqData.title || 'Featured Product',
+    image: reqData.productImage || reqData.image || '',
+    category: reqData.category || 'General',
+    price: reqData.price || 0,
+    location: reqData.location || 'Narela, Delhi',
+    ownerName: reqData.ownerName || 'Rentiwa User',
+    featuredPlan: planParams.planName || reqData.planRequested || 'Featured Listing',
+    startDate: now.toISOString(),
+    endDate: endDate.toISOString(),
+    status: 'Active',
+    createdBy: auth.currentUser?.email || 'teamrentiwa@gmail.com',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  };
+
+  const featRef = await addDoc(collection(db, "featuredListings"), featuredDoc);
+  return { featuredId: featRef.id, ...featuredDoc };
+};
+
+export const adminRejectPromotionRequest = async (requestId: string) => {
+  const reqRef = doc(db, "promotionRequests", requestId);
+  await updateDoc(reqRef, {
+    status: "Rejected",
+    rejectedAt: serverTimestamp()
+  });
+  return true;
+};
+
+export const adminCreateFeaturedListing = async (productData: any, planParams: { planName: string; durationDays: number }) => {
+  const now = new Date();
+  const days = planParams.durationDays || 1;
+  const endDate = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+
+  const images = productData.images || productData.productImages || [];
+  const image = images[0] || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80';
+
+  const featuredDoc = {
+    productId: productData.id,
+    userId: productData.ownerId || '',
+    title: productData.title || productData.productName || 'Featured Listing',
+    image,
+    category: productData.category || 'General',
+    price: Number(productData.price || productData.rentalPrice || 0),
+    location: productData.area || productData.location || 'Narela, Delhi',
+    ownerName: productData.ownerName || 'Verified Member',
+    featuredPlan: planParams.planName || '⭐ Featured Listing',
+    startDate: now.toISOString(),
+    endDate: endDate.toISOString(),
+    status: 'Active',
+    createdBy: auth.currentUser?.email || 'teamrentiwa@gmail.com',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  };
+
+  const docRef = await addDoc(collection(db, "featuredListings"), featuredDoc);
+  return { featuredId: docRef.id, ...featuredDoc };
+};
+
+export const adminUpdateFeaturedListing = async (featuredId: string, updates: Record<string, any>) => {
+  const docRef = doc(db, "featuredListings", featuredId);
+  await updateDoc(docRef, {
+    ...updates,
+    updatedAt: serverTimestamp()
+  });
+  return true;
+};
+
+export const adminDeleteFeaturedListing = async (featuredId: string) => {
+  const docRef = doc(db, "featuredListings", featuredId);
+  await deleteDoc(docRef);
+  return true;
+};
+
+
 

@@ -834,6 +834,12 @@
             <span class="nav-count" id="count-badge-upgrades" style="background:#FF5500;">0</span>
           </div>
 
+          <div class="nav-item" onclick="switchAdminTab('promotions', this)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            <span>Featured Promotions</span>
+            <span class="nav-count" id="count-badge-promotions" style="background:#FF5500;">0</span>
+          </div>
+
           <div class="nav-item" onclick="switchAdminTab('feedback', this)">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
             <span>Feedback</span>
@@ -1094,6 +1100,47 @@
             </div>
           </div>
 
+          <!-- TAB: FEATURED PROMOTIONS MANAGEMENT -->
+          <div id="tab-promotions" class="tab-pane">
+            <div class="admin-card">
+              
+              <div class="card-filter-bar" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                <div class="filter-group" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                  <input type="text" id="filter-promotions-search" class="admin-input-search" placeholder="Search product, owner, phone..." onkeyup="filterPromotionsTable()" style="min-width:240px;">
+                  <select id="filter-promotions-status" class="admin-select" onchange="filterPromotionsTable()">
+                    <option value="">All Statuses</option>
+                    <option value="Pending">Pending Requests</option>
+                    <option value="Approved">Approved / Active Featured</option>
+                    <option value="Rejected">Rejected</option>
+                    <option value="Expired">Expired</option>
+                  </select>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="openManualCreateFeaturedModal()" style="background:linear-gradient(135deg, #FF5500 0%, #D97706 100%); border:none; font-weight:700;">
+                  + Add Manual Featured Listing
+                </button>
+              </div>
+
+              <div class="table-responsive">
+                <table class="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Product Listing</th>
+                      <th>Owner / Phone</th>
+                      <th>Plan / Requested</th>
+                      <th>Start & End Date</th>
+                      <th>Status</th>
+                      <th style="text-align:right;">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="admin-promotions-table-body">
+                    <tr><td colspan="6" style="text-align:center; padding:32px; color:var(--admin-text-muted);">Loading promotion requests...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+          </div>
+
           <!-- TAB 5: FEEDBACK & REPORTS -->
           <div id="tab-feedback" class="tab-pane">
             <div class="admin-card" style="padding:32px;">
@@ -1238,12 +1285,70 @@
     </div>
   </div>
 
+  <!-- MODAL: APPROVE PROMOTION REQUEST -->
+  <div id="modal-approve-promotion" class="admin-modal">
+    <div class="admin-modal-card" style="max-width:500px;">
+      <div class="modal-header">
+        <h3>Approve Promotion & Publish Featured</h3>
+        <button class="modal-close-btn" onclick="closeAdminModal('modal-approve-promotion')">&times;</button>
+      </div>
+      <form id="approve-promotion-form" onsubmit="event.preventDefault(); confirmApprovePromotion();">
+        <input type="hidden" id="approve-prom-request-id">
+        <div class="modal-body" style="display:flex; flex-direction:column; gap:16px;">
+          
+          <div id="approve-prom-summary" style="background:#F8FAFC; padding:12px; border-radius:10px; border:1px solid #E2E8F0;">
+            <!-- Populated via JS -->
+          </div>
+
+          <div class="form-group">
+            <label style="font-weight:700;">Featured Duration (Days) *</label>
+            <input type="number" id="approve-prom-duration-days" class="form-input-admin" min="1" max="365" value="1" required>
+            <small style="color:var(--admin-text-muted);">Common values: 1 Day (₹49), 5 Days (₹149), 30 Days (₹499)</small>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeAdminModal('modal-approve-promotion')">Cancel</button>
+          <button type="submit" id="btn-confirm-approve-prom" class="btn btn-primary" style="background:linear-gradient(135deg, #FF5500 0%, #D97706 100%); border:none; font-weight:700;">
+            ⭐ Approve & Publish to Homepage
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: MANUAL FEATURED LISTINGS MANAGER -->
+  <div id="modal-manual-featured" class="admin-modal">
+    <div class="admin-modal-card" style="max-width:680px; max-height:85vh; display:flex; flex-direction:column;">
+      <div class="modal-header">
+        <h3>Feature Products on Homepage</h3>
+        <button class="modal-close-btn" onclick="closeAdminModal('modal-manual-featured')">&times;</button>
+      </div>
+      
+      <div style="padding:14px 20px 6px 20px;">
+        <input type="text" id="search-manual-featured-input" class="admin-input-search" placeholder="Search website products..." onkeyup="renderManualFeaturedProductsList()" style="width:100%; border-radius:10px;">
+      </div>
+
+      <div class="modal-body" style="overflow-y:auto; padding:10px 20px 20px 20px; flex:1;">
+        <div id="manual-featured-products-container" style="display:flex; flex-direction:column; gap:12px;">
+          <div style="text-align:center; padding:24px; color:var(--admin-text-muted);">Loading products...</div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeAdminModal('modal-manual-featured')">Close</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module" src="/js/app.js"></script>
   <script>
     // Local Admin State
     let allListingsData = [];
     let allUsersData = [];
     let allUpgradesData = [];
+    let allPromotionsData = [];
+    let allFeaturedData = [];
     let currentAdminUser = null;
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -1338,7 +1443,14 @@
         const waitingCount = allUpgradesData.filter(r => r.status === 'Waiting').length;
         document.getElementById('count-badge-upgrades').innerText = waitingCount;
 
-        // 4. Update Overview Stats
+        // 4. Fetch Promotion Requests & Active Featured
+        allPromotionsData = await window.Rentiwa.adminFetchPromotionRequests();
+        allFeaturedData = await window.Rentiwa.adminFetchFeaturedListings();
+        renderPromotionsTable();
+        const pendingPromCount = allPromotionsData.filter(p => p.status === 'Pending').length;
+        document.getElementById('count-badge-promotions').innerText = pendingPromCount;
+
+        // 5. Update Overview Stats
         updateDashboardStats();
 
         // 5. Load Settings
@@ -1612,6 +1724,342 @@
       const status = document.getElementById('filter-upgrades-status').value;
       const filtered = status ? allUpgradesData.filter(r => r.status === status) : allUpgradesData;
       renderUpgradesTable(filtered);
+    };
+
+    /* ====================================================
+       PROMOTIONS TABLE RENDER & FILTERS
+       ==================================================== */
+    function renderPromotionsTable() {
+      const tbody = document.getElementById('admin-promotions-table-body');
+      if (!tbody) return;
+
+      const q = (document.getElementById('filter-promotions-search')?.value || '').toLowerCase();
+      const statusFilter = document.getElementById('filter-promotions-status')?.value || '';
+
+      // Combine requests and active featured documents
+      const now = Date.now();
+      let rows = [];
+
+      // Add promotion requests
+      allPromotionsData.forEach(p => {
+        rows.push({
+          id: p.id,
+          type: 'request',
+          productId: p.productId,
+          title: p.productName || 'Product Item',
+          image: p.productImage || '',
+          ownerName: p.ownerName || 'Member',
+          ownerPhone: p.phone || '',
+          ownerEmail: p.email || '',
+          plan: p.planRequested || '⭐ Featured Listing',
+          requestedAt: p.createdAt || 0,
+          startDate: null,
+          endDate: null,
+          status: p.status || 'Pending',
+          raw: p
+        });
+      });
+
+      // Add active featured listings
+      allFeaturedData.forEach(f => {
+        // Avoid duplicating if request is already rendered and status is same
+        const isExpired = f.endDate && f.endDate < now;
+        rows.push({
+          id: f.id,
+          type: 'featured',
+          productId: f.productId || f.id,
+          title: f.title || 'Featured Listing',
+          image: f.image || '',
+          ownerName: f.ownerName || 'Verified Member',
+          ownerPhone: f.phone || f.ownerPhone || '',
+          ownerEmail: f.email || f.ownerEmail || '',
+          plan: f.planTitle || '⭐ Featured',
+          requestedAt: f.createdAt || 0,
+          startDate: f.startDate,
+          endDate: f.endDate,
+          status: isExpired ? 'Expired' : (f.active === false ? 'Deactivated' : 'Approved'),
+          raw: f
+        });
+      });
+
+      // Filter rows
+      if (q) {
+        rows = rows.filter(r => 
+          r.title.toLowerCase().includes(q) || 
+          r.ownerName.toLowerCase().includes(q) || 
+          r.ownerPhone.toLowerCase().includes(q) || 
+          r.ownerEmail.toLowerCase().includes(q)
+        );
+      }
+
+      if (statusFilter) {
+        rows = rows.filter(r => r.status === statusFilter);
+      }
+
+      // Sort pending first, then newest
+      rows.sort((a, b) => {
+        if (a.status === 'Pending' && b.status !== 'Pending') return -1;
+        if (a.status !== 'Pending' && b.status === 'Pending') return 1;
+        return (b.requestedAt || 0) - (a.requestedAt || 0);
+      });
+
+      if (rows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:32px; color:var(--admin-text-muted);">No promotion records found.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = rows.map(r => {
+        const img = r.image || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=150&q=80';
+        const isPending = r.status === 'Pending';
+        const isApproved = r.status === 'Approved';
+        const isExpired = r.status === 'Expired';
+        const isRejected = r.status === 'Rejected';
+
+        let dateDisplay = 'Requested: Recently';
+        if (r.type === 'featured' && r.startDate && r.endDate) {
+          const startStr = new Date(r.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+          const endStr = new Date(r.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+          dateDisplay = `${startStr} ➔ ${endStr}`;
+        } else if (r.requestedAt) {
+          dateDisplay = new Date(r.requestedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
+        let badgeClass = 'waiting';
+        if (isApproved) badgeClass = 'active';
+        else if (isExpired || isRejected) badgeClass = 'hidden';
+
+        return `
+          <tr>
+            <td>
+              <div class="table-prod-cell">
+                <img src="${img}" class="table-prod-img" alt="Product">
+                <div class="table-prod-info">
+                  <span class="table-prod-title">${escapeHTML(r.title)}</span>
+                  <span class="table-prod-sub">Product ID: ${r.productId}</span>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div style="display:flex; flex-direction:column;">
+                <span style="font-weight:700;">${escapeHTML(r.ownerName)}</span>
+                <span style="font-size:0.78rem; color:var(--admin-text-muted);">${escapeHTML(r.ownerPhone || r.ownerEmail || '-')}</span>
+              </div>
+            </td>
+            <td>
+              <span style="font-weight:700; color:#FF5500;">${escapeHTML(r.plan)}</span>
+            </td>
+            <td style="font-size:0.8rem; color:var(--admin-text-muted); font-weight:600;">
+              ${dateDisplay}
+            </td>
+            <td>
+              <span class="status-badge ${badgeClass}">${r.status}</span>
+            </td>
+            <td style="text-align:right;">
+              <div class="action-btn-group" style="justify-content:flex-end;">
+                ${isPending ? `
+                  <button class="btn-action btn-success" onclick="openApprovePromotionModal('${r.id}')">Approve</button>
+                  <button class="btn-action btn-danger" onclick="rejectPromotionConfirm('${r.id}')">Reject</button>
+                ` : ''}
+
+                ${r.type === 'featured' ? `
+                  <button class="btn-action btn-danger" onclick="deleteFeaturedConfirm('${r.id}')">Delete</button>
+                ` : ''}
+
+                ${r.ownerPhone ? `
+                  <a href="https://wa.me/${r.ownerPhone.replace(/[^0-9]/g, '')}?text=Hello%20${encodeURIComponent(r.ownerName)}%2C%20regarding%20your%20Rentiwa%20promotion%20request%20for%20${encodeURIComponent(r.title)}" target="_blank" rel="noopener" class="btn-action" style="background:#25D366; color:#fff;">WhatsApp</a>
+                ` : ''}
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    window.filterPromotionsTable = function() {
+      renderPromotionsTable();
+    };
+
+    window.openApprovePromotionModal = function(requestId) {
+      const req = allPromotionsData.find(p => p.id === requestId);
+      if (!req) return;
+
+      document.getElementById('approve-prom-request-id').value = req.id;
+      
+      let durationDays = 1;
+      if (req.planRequested && req.planRequested.includes('5 Days')) durationDays = 5;
+      else if (req.planRequested && req.planRequested.includes('30 Days')) durationDays = 30;
+
+      document.getElementById('approve-prom-duration-days').value = durationDays;
+
+      document.getElementById('approve-prom-summary').innerHTML = `
+        <div style="font-weight:700; font-size:0.95rem; color:#0F172A;">${escapeHTML(req.productName)}</div>
+        <div style="font-size:0.82rem; color:#64748B; margin-top:2px;">Requested Plan: <strong>${escapeHTML(req.planRequested)}</strong></div>
+        <div style="font-size:0.82rem; color:#64748B; margin-top:2px;">Owner: ${escapeHTML(req.ownerName)} (${escapeHTML(req.phone || req.email)})</div>
+      `;
+
+      document.getElementById('modal-approve-promotion').classList.add('active');
+    };
+
+    window.confirmApprovePromotion = async function() {
+      const requestId = document.getElementById('approve-prom-request-id').value;
+      const durationDays = Number(document.getElementById('approve-prom-duration-days').value) || 1;
+
+      const btn = document.getElementById('btn-confirm-approve-prom');
+      if (btn) btn.disabled = true;
+
+      try {
+        await window.Rentiwa.adminApprovePromotionRequest(requestId, durationDays);
+        closeAdminModal('modal-approve-promotion');
+        window.Rentiwa.showToast("⭐ Promotion Approved & Featured on Homepage!");
+        refreshAdminData();
+      } catch (err) {
+        alert("Failed to approve promotion: " + err.message);
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    };
+
+    window.rejectPromotionConfirm = async function(requestId) {
+      if (confirm("Are you sure you want to reject this promotion request?")) {
+        try {
+          await window.Rentiwa.adminRejectPromotionRequest(requestId);
+          window.Rentiwa.showToast("Promotion request rejected.");
+          refreshAdminData();
+        } catch (err) {
+          alert("Failed to reject promotion request: " + err.message);
+        }
+      }
+    };
+
+    window.deleteFeaturedConfirm = async function(featuredId) {
+      if (confirm("Are you sure you want to remove this item from Featured Listings?")) {
+        try {
+          await window.Rentiwa.adminDeleteFeaturedListing(featuredId);
+          window.Rentiwa.showToast("Featured listing deleted.");
+          refreshAdminData();
+        } catch (err) {
+          alert("Failed to delete featured listing: " + err.message);
+        }
+      }
+    };
+
+    window.openManualCreateFeaturedModal = function() {
+      document.getElementById('modal-manual-featured').classList.add('active');
+      renderManualFeaturedProductsList();
+    };
+
+    window.renderManualFeaturedProductsList = function() {
+      const container = document.getElementById('manual-featured-products-container');
+      if (!container) return;
+
+      if (!allListingsData || allListingsData.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding:32px; color:var(--admin-text-muted);">No products found in website products collection.</div>`;
+        return;
+      }
+
+      const q = (document.getElementById('search-manual-featured-input')?.value || '').toLowerCase().trim();
+
+      let filtered = allListingsData;
+      if (q) {
+        filtered = allListingsData.filter(p => 
+          (p.title || p.productName || '').toLowerCase().includes(q) ||
+          (p.category || '').toLowerCase().includes(q) ||
+          (p.ownerName || '').toLowerCase().includes(q) ||
+          (p.location || p.area || '').toLowerCase().includes(q)
+        );
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding:24px; color:var(--admin-text-muted);">No matching products found.</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(product => {
+        const title = escapeHTML(product.title || product.productName || 'Listing Item');
+        const img = (product.images && product.images[0]) || (product.productImages && product.productImages[0]) || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=150&q=80';
+        const price = product.price || product.rentalPrice || 0;
+        const owner = escapeHTML(product.ownerName || 'Verified Member');
+        const location = escapeHTML(product.location || product.area || 'Narela, Delhi');
+
+        // Check if currently featured in featuredListings
+        const activeFeaturedDoc = allFeaturedData.find(f => {
+          if (f.productId !== product.id && f.id !== product.id) return false;
+          return f.status === 'Active' || f.status === 'Approved';
+        });
+
+        const isFeatured = !!activeFeaturedDoc;
+        const featuredDocId = activeFeaturedDoc ? activeFeaturedDoc.id : '';
+
+        return `
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px;">
+            <div style="display:flex; align-items:center; gap:12px; min-width:0; flex:1;">
+              <img src="${img}" style="width:52px; height:52px; border-radius:8px; object-fit:cover; flex-shrink:0;">
+              <div style="min-width:0; flex:1;">
+                <div style="font-weight:700; font-size:0.92rem; color:#0F172A; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                  ${title}
+                </div>
+                <div style="font-size:0.78rem; color:#64748B; margin-top:2px;">
+                  ₹${price} / day • ${owner} • ${location}
+                </div>
+              </div>
+            </div>
+
+            <div style="flex-shrink:0;">
+              ${isFeatured ? `
+                <button type="button" class="btn btn-sm" style="background:#EF4444; color:#fff; border:none; font-weight:700; padding:8px 14px; border-radius:8px; cursor:pointer;" onclick="toggleHomepageFeatured('${product.id}', '${featuredDocId}', true)">
+                  Remove from Homepage
+                </button>
+              ` : `
+                <button type="button" class="btn btn-sm" style="background:linear-gradient(135deg, #FF5500 0%, #D97706 100%); color:#fff; border:none; font-weight:700; padding:8px 14px; border-radius:8px; cursor:pointer;" onclick="toggleHomepageFeatured('${product.id}', null, false)">
+                  Feature on Homepage
+                </button>
+              `}
+            </div>
+          </div>
+        `;
+      }).join('');
+    };
+
+    window.toggleHomepageFeatured = async function(productId, featuredId, isCurrentlyFeatured) {
+      if (isCurrentlyFeatured) {
+        if (!featuredId) return;
+        try {
+          await window.Rentiwa.adminDeleteFeaturedListing(featuredId);
+          window.Rentiwa.showToast("Removed from Homepage Featured Listings");
+          await refreshAdminData();
+          renderManualFeaturedProductsList();
+        } catch (err) {
+          alert("Failed to remove from homepage: " + err.message);
+        }
+      } else {
+        const product = allListingsData.find(l => l.id === productId);
+        if (!product) return;
+
+        try {
+          await window.Rentiwa.adminCreateFeaturedListing({
+            id: product.id,
+            productId: product.id,
+            title: product.title || product.productName,
+            images: product.images || product.productImages || [],
+            price: product.price || product.rentalPrice || 0,
+            location: product.location || product.area || 'Narela, Delhi',
+            category: product.category || 'General',
+            ownerName: product.ownerName || 'Verified Member',
+            ownerPhone: product.ownerPhone || product.phoneNumber || '',
+            ownerEmail: product.ownerEmail || '',
+            ownerId: product.ownerId || ''
+          }, {
+            planName: "⭐ Homepage Featured",
+            durationDays: 30
+          });
+
+          window.Rentiwa.showToast("Added to Homepage Featured Listings! ⭐");
+          await refreshAdminData();
+          renderManualFeaturedProductsList();
+        } catch (err) {
+          alert("Failed to feature product on homepage: " + err.message);
+        }
+      }
     };
 
     // ACTION HANDLERS

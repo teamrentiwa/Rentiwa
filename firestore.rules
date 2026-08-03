@@ -1,10 +1,41 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // Default catch-all for all documents
     match /{document=**} {
+      allow read, write: if true;
+    }
+
+    // Featured Listings Collection
+    match /featuredListings/{featuredId} {
+      allow read, write: if true;
+    }
+
+    // Promotion Requests Collection
+    match /promotionRequests/{requestId} {
+      allow read, write: if true;
+    }
+
+    // Upgrade Requests Collection
+    match /upgrade_requests/{requestId} {
+      allow read, write: if true;
+    }
+
+    // Listings Collection
+    match /listings/{listingId} {
+      allow read, write: if true;
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+
+    // Settings Collection
+    match /settings/{settingId} {
       allow read, write: if true;
     }
   }
 }
-
 

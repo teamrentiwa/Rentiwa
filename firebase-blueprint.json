@@ -1,0 +1,77 @@
+{
+  "entities": {
+    "Listing": {
+      "title": "Listing Document",
+      "description": "Product listing available for rent on Rentiwa marketplace",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "price": { "type": "number" },
+        "location": { "type": "string" },
+        "images": { "type": "array" },
+        "ownerId": { "type": "string" },
+        "ownerName": { "type": "string" },
+        "ownerPhone": { "type": "string" },
+        "ownerEmail": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["title", "category", "price", "location", "ownerId", "status"]
+    },
+    "PromotionRequest": {
+      "title": "Promotion Request Document",
+      "description": "Request by listing owner to promote a product on homepage featured section",
+      "type": "object",
+      "properties": {
+        "requestId": { "type": "string" },
+        "userId": { "type": "string" },
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "productImage": { "type": "string" },
+        "ownerName": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "planRequested": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pending", "Approved", "Rejected"] }
+      },
+      "required": ["userId", "productId", "productName", "planRequested", "status"]
+    },
+    "FeaturedListing": {
+      "title": "Featured Listing Document",
+      "description": "Admin approved featured product displayed in homepage carousel",
+      "type": "object",
+      "properties": {
+        "featuredId": { "type": "string" },
+        "productId": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "image": { "type": "string" },
+        "category": { "type": "string" },
+        "price": { "type": "number" },
+        "location": { "type": "string" },
+        "ownerName": { "type": "string" },
+        "featuredPlan": { "type": "string" },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "status": { "type": "string", "enum": ["Active", "Expired", "Deactivated", "Rejected"] },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["productId", "userId", "title", "image", "category", "price", "location", "status"]
+    }
+  },
+  "firestore": {
+    "/listings/{listingId}": {
+      "schema": { "$ref": "#/entities/Listing" },
+      "description": "Collection of all market rental products"
+    },
+    "/promotionRequests/{requestId}": {
+      "schema": { "$ref": "#/entities/PromotionRequest" },
+      "description": "User submitted requests for featured promotion"
+    },
+    "/featuredListings/{featuredId}": {
+      "schema": { "$ref": "#/entities/FeaturedListing" },
+      "description": "Admin approved active and past featured listings"
+    }
+  }
+}
