@@ -447,18 +447,33 @@ export const deleteListingFromFirestore = async (id: string) => {
   }
 
   const docRef = doc(db, "listings", id);
-  const docSnap = await getDoc(docRef);
+  let docSnap;
+  try {
+    docSnap = await getDoc(docRef);
+  } catch (err) {
+    handleFirestoreError(err, OperationType.READ, `listings/${id}`);
+  }
 
-  if (!docSnap.exists()) {
-    throw new Error("Listing not found.");
+  if (!docSnap || !docSnap.exists()) {
+    return true;
   }
 
   const data = docSnap.data();
-  if (data.ownerId !== currentUser.uid) {
+  const ownerId = data.ownerId || data.ownerUid || data.userId || '';
+  const ownerEmail = data.ownerEmail || '';
+
+  const isOwner = (ownerId && ownerId === currentUser.uid) ||
+                  (ownerEmail && currentUser.email && ownerEmail.toLowerCase() === currentUser.email.toLowerCase());
+
+  if (!isOwner) {
     throw new Error("Unauthorized: You can only delete your own listings.");
   }
 
-  await deleteDoc(docRef);
+  try {
+    await deleteDoc(docRef);
+  } catch (err) {
+    handleFirestoreError(err, OperationType.DELETE, `listings/${id}`);
+  }
   return true;
 };
 

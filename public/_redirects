@@ -5,7 +5,10 @@
 /signup /pages/signup.html 200
 /add-listing /pages/add-listing.html 200
 /profile /pages/profile.html 200
+/listing /pages/listing.html 200
 /listing/* /pages/listing.html 200
+/promote /pages/promote.html 200
+/promote/* /pages/promote.html 200
 /terms /pages/terms.html 200
 /privacy /pages/terms.html 200
 /my-listings /pages/profile.html 200

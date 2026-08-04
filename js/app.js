@@ -608,7 +608,9 @@ const Rentiwa = {
     const isFav = favs.includes(p.id) || favs.includes(String(p.id));
     const priceHTML = this.formatProductPrice(p);
     const user = this.getUser();
-    const isMyItem = !!(user && user.uid && p.ownerId && p.ownerId === user.uid);
+    const ownerId = p.ownerId || p.ownerUid || p.userId || '';
+    const ownerEmail = p.ownerEmail || '';
+    const isMyItem = !!(user && user.uid && ((ownerId && ownerId === user.uid) || (ownerEmail && user.email && ownerEmail.toLowerCase() === user.email.toLowerCase())));
     const onDeleteCallbackName = options.onDeleteCallback || '';
     const onFavToggle = options.onFavToggle || '';
 
@@ -999,9 +1001,20 @@ const Rentiwa = {
     let products = this.getProducts();
     const product = products.find(p => p.id === id || String(p.id) === String(id));
 
-    if (!user || !user.uid || !product || product.ownerId !== user.uid) {
-      this.showToast('Permission denied: You can only delete your own listings.', 'error');
+    if (!user || !user.uid) {
+      this.showToast('You must be logged in to delete a listing.', 'error');
       return false;
+    }
+
+    if (product) {
+      const ownerId = product.ownerId || product.ownerUid || product.userId || '';
+      const ownerEmail = product.ownerEmail || '';
+      const isOwner = (ownerId && ownerId === user.uid) ||
+                      (ownerEmail && user.email && ownerEmail.toLowerCase() === user.email.toLowerCase());
+      if (!isOwner) {
+        this.showToast('Permission denied: You can only delete your own listings.', 'error');
+        return false;
+      }
     }
 
     try {
